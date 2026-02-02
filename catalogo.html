@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Impetus landing page">
-  <title>Impetus Landing Page</title>
+  <meta name="description" content="Catalogo | Impetus">
+  <title>Catalogo | Impetus</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,700|Roboto:400&display=swap" rel="stylesheet">
@@ -17,7 +17,7 @@
         <a class="logo-link" href="index.html">
           <img src="images/image-3-145.png" class="logo" alt="Impetus">
         </a>
-        
+
         <div class="nav-group">
           <nav class="main-nav" aria-label="Principal">
             <a href="catalogo.html">Catalogo</a>
@@ -35,7 +35,7 @@
               </form>
               <div class="search-results" aria-live="polite"></div>
             </div>
-        </div>
+          </div>
 
           <button class="cart-button" type="button" aria-label="Carrito">
             <span class="cart-icon" aria-hidden="true">
@@ -50,31 +50,42 @@
       </div>
     </header>
 
-    <main>
-      <section class="hero">
-        <img src="images/bg-hero-131.png" class="hero-bg" alt="" aria-hidden="true">
-        <div class="container container-left hero-inner">
-          <div class="hero-media">
-            <img src="images/node-133.png" class="hero-product" alt="Catuaí Amarillo">
+    <main class="catalog-page">
+      <section class="catalog-hero">
+        <div class="container catalog-hero-inner">
+          <div class="catalog-copy">
+            <span class="section-eyebrow">Impetus</span>
+            <h1>Catalogo</h1>
+            <p class="catalog-lead">
+              Descubre nuestra seleccion de cafes de origen, tostados en Veracruz para cada metodo.
+            </p>
           </div>
-          <div class="hero-content">
-            <span class="eyebrow">Lo mas nuevo...</span>
-            <h1 style="width: 40rem;">Conoce nuestra nueva selección!</h1>
-            <p>Prueba nuestros nuevos tostados, originarios de Veracruz.</p>
-            <a class="button button-primary" href="#featured">Compra</a>
+          <div class="catalog-meta" style="display: none">
+            <span class="catalog-chip">Tostado medio</span>
+            <span class="catalog-chip">Origen Veracruz</span>
+            <span class="catalog-chip">Envio en 24-48 hrs</span>
           </div>
         </div>
       </section>
 
-      <section class="product-grid-section featured-section" id="featured" style="padding-bottom: 0;">
-        <div class="section-scroll-indicator" aria-hidden="true">⌄</div>
-        <div class="container featured-inner">
+      <section class="product-grid-section">
+        <div class="container">
           <div class="featured-header">
             <div>
-              <h2>Destacados</h2>
+              <h2>Todos los productos</h2>
             </div>
-            <a class="section-link" href="catalogo.html">Ver catálogo completo</a>
+            <div class="catalog-sort">
+              <label class="catalog-sort-label" for="catalog-sort">Ordenar por</label>
+              <select id="catalog-sort" class="catalog-sort-select" aria-label="Ordenar catalogo">
+                <option value="destacados">Destacados</option>
+                <option value="precio-asc">Precio: menor a mayor</option>
+                <option value="precio-desc">Precio: mayor a menor</option>
+                <option value="nombre-asc">Nombre: A - Z</option>
+                <option value="nombre-desc">Nombre: Z - A</option>
+              </select>
+            </div>
           </div>
+
           <div class="product-grid">
             <article class="product-card" data-product-id="catuai-amarillo">
               <a class="product-link" href="product.html?id=catuai-amarillo&img=images/node-21.png" aria-label="Ver Catuaí Amarillo">
@@ -123,129 +134,21 @@
                 <span>Añade al carrito</span>
               </button>
             </article>
-
-            <article class="product-card" data-product-id="catuai-amarillo">
-              <a class="product-link" href="product.html?id=catuai-amarillo&img=images/node-59.png" aria-label="Ver Catuaí Amarillo">
-                <img src="images/node-59.png" alt="Catuaí Amarillo">
-              </a>
-              <h3>Catuaí Amarillo</h3>
-              <span class="price">Desde $300</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="zongolica">
-              <a class="product-link" href="product.html?id=zongolica&img=images/node-67.png" aria-label="Ver Zongolica">
-                <img src="images/node-67.png" alt="Zongolica">
-              </a>
-              <h3>Zongolica</h3>
-              <span class="price">Desde $320</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="cosautlan">
-              <a class="product-link" href="product.html?id=cosautlan&img=images/node-75.png" aria-label="Ver Cosautlán">
-                <img src="images/node-75.png" alt="Cosautlán">
-              </a>
-              <h3>Cosautlán</h3>
-              <span class="price">Desde $310</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="corahe">
-              <a class="product-link" href="product.html?id=corahe&img=images/node-83.png" aria-label="Ver Corahe">
-                <img src="images/node-83.png" alt="Corahe">
-              </a>
-              <h3>Corahe</h3>
-              <span class="price">Desde $290</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-          </div>
-          <div class="featured-footer">
-            <a class="button button-light" href="catalogo.html">Ver todos</a>
-          </div>
-        </div>
-      </section>
-
-      <section class="split-section split-section--bordered split-section--corahe">
-        <div class="container container-left split-inner">
-          <div class="split-content">
-            <h2>CORAHE</h2>
-            <p>Descubre nuestra nueva selección de tostados Corahe, tiene notas de cacao y frutos rojos que lo hacen perfecto para los amantes del chocolate.</p>
-            <a class="button button-light" href="product.html?id=corahe&img=images/node-46.png">Compra</a>
-          </div>
-          <div class="split-media">
-            <img src="images/cold-brew-15.png" alt="Corahe">
-          </div>
-        </div>
-      </section>
-
-      <section class="info-strip">
-        <div class="container info-strip-inner">
-          <div class="info-card">
-            <h3>Tu ritual, tu metodo</h3>
-            <p>Selecciona tu molienda ideal y recibe recomendaciones para cada preparacion.</p>
-          </div>
-          <div class="info-card">
-            <h3>Tostado reciente</h3>
-            <p>Entregas semanales para que tu cafe llegue con su aroma intacto.</p>
-          </div>
-          <div class="info-card">
-            <h3>Envio rapido</h3>
-            <p>Despachos en 24-48 horas a todo Mexico con seguimiento incluido.</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="split-section split-section--photo split-section--coldbrew split-section--bordered" style="padding-bottom: 0;">
-        <div class="container container-left split-inner">
-          <div class="split-content">
-            <h2>COLD BREW</h2>
-            <p>Refrescante, suave y con notas dulces. Nuestro Cold Brew se prepara lento para lograr un perfil balanceado y versátil.</p>
-            <a class="button button-light" href="catalogo.html">Explora</a>
-          </div>
-          <div class="split-media">
-            <img src="images/cold-brew-6.png" alt="Cold Brew">
           </div>
         </div>
       </section>
     </main>
 
-    <footer class="site-footer">
-      <div class="container footer-inner">
-        <div class="footer-brand">
-          <img src="images/image-3-145.png" class="footer-logo" alt="Impetus">
-        </div>
-        <nav class="footer-nav" aria-label="Secundario">
-          <a href="catalogo.html">Catalogo</a>
-          <a href="nosotros.html">Nosotros</a>
-          <a href="contacto.html">Contacto</a>
-        </nav>
-        <p class="footer-meta">© 2026 Impetus</p>
-      </div>
-    </footer>
-
     <div class="quick-add-modal" id="quick-add-modal" aria-hidden="true">
       <div class="quick-add-backdrop" data-quick-add-close></div>
       <div class="quick-add-panel" role="dialog" aria-modal="true" aria-labelledby="quick-add-title">
         <button class="quick-add-close" type="button" data-quick-add-close aria-label="Cerrar">×</button>
-        <p class="quick-add-kicker">Añadir rápido</p>
+        <p class="quick-add-kicker">Añadir rapido</p>
         <h2 id="quick-add-title"></h2>
         <div class="quick-add-group">
           <div class="quick-add-group-header">
             <span>Selecciona tu tamaño</span>
-            <button class="quick-add-help" type="button">¿Qué tamaño necesito?</button>
+            <button class="quick-add-help" type="button">¿Que tamaño necesito?</button>
           </div>
           <div class="quick-add-options" id="quick-add-size-options"></div>
         </div>
@@ -253,7 +156,7 @@
         <div class="quick-add-group">
           <div class="quick-add-group-header">
             <span>Selecciona tu molienda</span>
-            <button class="quick-add-help" type="button">¿Qué molienda necesito?</button>
+            <button class="quick-add-help" type="button">¿Que molienda necesito?</button>
           </div>
           <div class="quick-add-options">
             <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="whole">Grano entero</button>
@@ -270,12 +173,12 @@
           </div>
           <div class="quick-add-stock">
             <span class="stock-dot" aria-hidden="true"></span>
-            <span>En stock · Envío al día siguiente</span>
+            <span>En stock · Envio al dia siguiente</span>
           </div>
         </div>
 
         <button class="button button-primary quick-add-submit" id="quick-add-submit" type="button" disabled>Selecciona opciones</button>
-        <p class="quick-add-footnote">Tu pedido se enviará en 24-48 horas.</p>
+        <p class="quick-add-footnote">Tu pedido se enviara en 24-48 horas.</p>
       </div>
     </div>
 
@@ -293,7 +196,7 @@
             <span id="cart-subtotal">$0</span>
           </div>
           <button class="button button-primary cart-checkout" id="cart-checkout" type="button">Ir a pagar</button>
-          <p class="cart-note">Envío calculado al finalizar.</p>
+          <p class="cart-note">Envio calculado al finalizar.</p>
         </div>
       </aside>
     </div>
@@ -302,6 +205,7 @@
   <script src="product-data.js"></script>
   <script src="cart.js"></script>
   <script src="landing.js"></script>
+  <script src="catalog.js"></script>
   <script src="search.js"></script>
 </body>
 </html>
