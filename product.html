@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Producto | Impetus">
+  <title>Producto | Impetus</title>
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,500,700|Roboto:400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="logo-link" href="index.html">
+          <img src="images/image-3-145.png" class="logo" alt="Impetus">
+        </a>
+
+        <nav class="main-nav" aria-label="Principal">
+          <a href="catalogo.html">Catalogo</a>
+          <a href="#">Nosotros</a>
+          <a href="#">Contacto</a>
+        </nav>
+
+        <div class="header-actions">
+          <form class="search" role="search">
+            <input type="search" name="q" placeholder="Busca un producto" aria-label="Busca un producto">
+            <button class="icon-button" type="submit" aria-label="Buscar">
+              <img src="images/icon-159.svg" alt="">
+            </button>
+          </form>
+
+          <button class="cart-button" type="button" aria-label="Carrito">
+            <span class="cart-icon" aria-hidden="true">
+              <img src="images/vector-162.svg" class="cart-outline" alt="">
+              <img src="images/vector-165.svg" class="cart-handle" alt="">
+              <img src="images/vector-163.svg" class="cart-dot cart-dot-left" alt="">
+              <img src="images/vector-164.svg" class="cart-dot cart-dot-right" alt="">
+            </span>
+            <span class="cart-count">2</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="product-page">
+      <section class="product-hero">
+        <div class="container product-hero-inner">
+          <div class="product-hero-media">
+            <img id="product-image" src="" alt="">
+            <div id="product-thumbs" class="product-thumbs" role="list"></div>
+          </div>
+          <div class="product-hero-content">
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <a href="index.html">Home</a>
+              <span aria-hidden="true">›</span>
+              <a href="catalogo.html">Catalogo</a>
+              <span aria-hidden="true">›</span>
+              <span id="breadcrumb-product"></span>
+            </nav>
+            <h1 id="product-name"></h1>
+            <div class="product-price-row">
+              <span id="product-old-price" class="product-old-price"></span>
+              <span id="product-price" class="product-price"></span>
+              <span id="product-badge" class="product-badge"></span>
+            </div>
+            <p id="product-description" class="product-description"></p>
+            <div class="product-config">
+              <div class="quick-add-group">
+                <div class="quick-add-group-header">
+                  <span>Selecciona tu tamaño</span>
+                  <button class="quick-add-help" type="button">¿Qué tamaño necesito?</button>
+                </div>
+                <div class="quick-add-options">
+                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="200g">200g</button>
+                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="500g">500g</button>
+                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="1kg">1kg</button>
+                </div>
+              </div>
+
+              <div class="quick-add-group">
+                <div class="quick-add-group-header">
+                  <span>Selecciona tu molienda</span>
+                  <button class="quick-add-help" type="button">¿Qué molienda necesito?</button>
+                </div>
+                <div class="quick-add-options">
+                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="whole">Grano entero</button>
+                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="medium">Molienda media</button>
+                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="fine">Molienda fina</button>
+                </div>
+              </div>
+
+              <div class="quick-add-qty-row">
+                <div class="qty-control">
+                  <button class="qty-button" type="button" data-qty-change="-1" aria-label="Disminuir">-</button>
+                  <span id="product-qty">1</span>
+                  <button class="qty-button" type="button" data-qty-change="1" aria-label="Aumentar">+</button>
+                </div>
+                <div class="quick-add-stock">
+                  <span class="stock-dot" aria-hidden="true"></span>
+                  <span>En stock · Envío al día siguiente</span>
+                </div>
+              </div>
+            </div>
+            <ul id="product-features" class="product-features"></ul>
+            <p id="product-meta" class="product-meta"></p>
+            <p id="product-note" class="product-note" aria-live="polite"></p>
+            <div class="product-actions">
+              <button class="button button-primary" type="button">Añade al carrito</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="product-data.js"></script>
+  <script src="product.js"></script>
+</body>
+</html>
