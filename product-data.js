@@ -2,7 +2,9 @@ const PRODUCTS = [
   {
     id: "catuai-amarillo",
     name: "Catuaí Amarillo",
-    price: "Desde $199",
+    price: "Desde $300",
+    priceValue: 300,
+    priceId: "price_catuai_500g",
     image: "images/node-21.png",
     images: [
       "images/node-21.png",
@@ -16,6 +18,11 @@ const PRODUCTS = [
     notes: "Tostado medio",
     weight: "500g",
     badge: "Nuevo",
+    sizes: [
+      { label: "250g", grams: 250, price: 300, priceId: "price_catuai_250g" },
+      { label: "500g", grams: 500, price: 450, priceId: "price_catuai_500g" },
+      { label: "1kg", grams: 1000, price: 800, priceId: "price_catuai_1kg" },
+    ],
     features: [
       "Notas cítricas suaves",
       "Cuerpo sedoso",
@@ -26,7 +33,9 @@ const PRODUCTS = [
   {
     id: "zongolica",
     name: "Zongolica",
-    price: "Desde $299",
+    price: "Desde $320",
+    priceValue: 320,
+    priceId: "price_zongolica_500g",
     image: "images/node-30.png",
     images: [
       "images/node-30.png",
@@ -40,6 +49,11 @@ const PRODUCTS = [
     notes: "Tostado medio",
     weight: "500g",
     badge: "Nuevo",
+    sizes: [
+      { label: "250g", grams: 250, price: 320, priceId: "price_zongolica_250g" },
+      { label: "500g", grams: 500, price: 470, priceId: "price_zongolica_500g" },
+      { label: "1kg", grams: 1000, price: 820, priceId: "price_zongolica_1kg" },
+    ],
     features: [
       "Notas a cacao",
       "Final limpio",
@@ -50,7 +64,9 @@ const PRODUCTS = [
   {
     id: "cosautlan",
     name: "Cosautlán",
-    price: "Desde $299",
+    price: "Desde $310",
+    priceValue: 310,
+    priceId: "price_cosautlan_500g",
     image: "images/node-38.png",
     images: [
       "images/node-38.png",
@@ -64,6 +80,11 @@ const PRODUCTS = [
     notes: "Tostado medio",
     weight: "500g",
     badge: "Nuevo",
+    sizes: [
+      { label: "250g", grams: 250, price: 310, priceId: "price_cosautlan_250g" },
+      { label: "500g", grams: 500, price: 460, priceId: "price_cosautlan_500g" },
+      { label: "1kg", grams: 1000, price: 810, priceId: "price_cosautlan_1kg" },
+    ],
     features: [
       "Notas avellanadas",
       "Aroma profundo",
@@ -71,4 +92,40 @@ const PRODUCTS = [
       "Presentación de 500g",
     ],
   },
+  {
+    id: "corahe",
+    name: "Corahe",
+    price: "Desde $290",
+    priceValue: 290,
+    priceId: "price_corahe_500g",
+    image: "images/node-46.png",
+    images: [
+      "images/node-46.png",
+      "images/node-46.png",
+      "images/node-46.png",
+      "images/node-46.png",
+      "images/node-46.png",
+    ],
+    description:
+      "Café de perfil suave y dulce, pensado para disfrutarse frío o caliente.",
+    origin: "Veracruz",
+    notes: "Tostado medio",
+    weight: "500g",
+    badge: "Nuevo",
+    sizes: [
+      { label: "250g", grams: 250, price: 290, priceId: "price_corahe_250g" },
+      { label: "500g", grams: 500, price: 440, priceId: "price_corahe_500g" },
+      { label: "1kg", grams: 1000, price: 790, priceId: "price_corahe_1kg" },
+    ],
+    features: [
+      "Ideal para Cold Brew",
+      "Notas dulces y suaves",
+      "Tostado medio",
+      "Presentación de 500g",
+    ],
+  },
 ];
+
+if (typeof window !== "undefined") {
+  window.PRODUCTS = PRODUCTS;
+}

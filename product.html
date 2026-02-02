@@ -16,19 +16,21 @@
           <img src="images/image-3-145.png" class="logo" alt="Impetus">
         </a>
 
-        <nav class="main-nav" aria-label="Principal">
-          <a href="catalogo.html">Catalogo</a>
-          <a href="#">Nosotros</a>
-          <a href="#">Contacto</a>
-        </nav>
+        <div class="nav-group">
+          <nav class="main-nav" aria-label="Principal">
+            <a href="catalogo.html">Catalogo</a>
+            <a href="nosotros.html">Nosotros</a>
+            <a href="contacto.html">Contacto</a>
+          </nav>
 
-        <div class="header-actions">
-          <form class="search" role="search">
-            <input type="search" name="q" placeholder="Busca un producto" aria-label="Busca un producto">
-            <button class="icon-button" type="submit" aria-label="Buscar">
-              <img src="images/icon-159.svg" alt="">
-            </button>
-          </form>
+          <div class="header-actions">
+            <form class="search" role="search">
+              <input type="search" name="q" placeholder="Busca un producto" aria-label="Busca un producto">
+              <button class="icon-button" type="submit" aria-label="Buscar">
+                <img src="images/icon-159.svg" alt="">
+              </button>
+            </form>
+          </div>
 
           <button class="cart-button" type="button" aria-label="Carrito">
             <span class="cart-icon" aria-hidden="true">
@@ -64,6 +66,7 @@
               <span id="product-price" class="product-price"></span>
               <span id="product-badge" class="product-badge"></span>
             </div>
+            <p id="product-per-gram" class="product-per-gram"></p>
             <p id="product-description" class="product-description"></p>
             <div class="product-config">
               <div class="quick-add-group">
@@ -71,11 +74,7 @@
                   <span>Selecciona tu tamaño</span>
                   <button class="quick-add-help" type="button">¿Qué tamaño necesito?</button>
                 </div>
-                <div class="quick-add-options">
-                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="200g">200g</button>
-                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="500g">500g</button>
-                  <button class="quick-add-option" type="button" data-option-group="size" data-option-value="1kg">1kg</button>
-                </div>
+                <div class="quick-add-options" id="product-size-options"></div>
               </div>
 
               <div class="quick-add-group">
@@ -104,9 +103,8 @@
             </div>
             <ul id="product-features" class="product-features"></ul>
             <p id="product-meta" class="product-meta"></p>
-            <p id="product-note" class="product-note" aria-live="polite"></p>
             <div class="product-actions">
-              <button class="button button-primary" type="button">Añade al carrito</button>
+              <button class="button button-primary" id="product-add" type="button" disabled>Añade al carrito</button>
             </div>
           </div>
         </div>
@@ -114,7 +112,27 @@
     </main>
   </div>
 
+  <div class="cart-drawer" id="cart-drawer" aria-hidden="true">
+    <div class="cart-backdrop" data-cart-close></div>
+    <aside class="cart-panel" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+      <div class="cart-header">
+        <h2 id="cart-title">Carrito</h2>
+        <button class="cart-close" type="button" data-cart-close aria-label="Cerrar">×</button>
+      </div>
+      <div class="cart-items" id="cart-items"></div>
+      <div class="cart-summary">
+        <div class="cart-summary-row">
+          <span>Subtotal</span>
+          <span id="cart-subtotal">$0</span>
+        </div>
+        <button class="button button-primary cart-checkout" id="cart-checkout" type="button">Ir a pagar</button>
+        <p class="cart-note">Envío calculado al finalizar.</p>
+      </div>
+    </aside>
+  </div>
+
   <script src="product-data.js"></script>
+  <script src="cart.js"></script>
   <script src="product.js"></script>
 </body>
 </html>

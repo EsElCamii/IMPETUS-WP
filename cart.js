@@ -8,10 +8,23 @@
   const countEls = document.querySelectorAll(".cart-count");
 
   const formatCurrency = (value) => {
-    if (typeof value !== "number") {
+    if (typeof value !== "number" || Number.isNaN(value)) {
       return "—";
     }
     return `$${value.toFixed(0)}`;
+  };
+
+  const parsePriceValue = (item) => {
+    if (typeof item.priceValue === "number" && !Number.isNaN(item.priceValue)) {
+      return item.priceValue;
+    }
+    if (typeof item.price === "string") {
+      const match = item.price.match(/\$(\d+)/);
+      if (match) {
+        return Number(match[1]);
+      }
+    }
+    return 0;
   };
 
   const readCart = () => {
@@ -78,11 +91,26 @@
         meta.textContent = `${item.size || "—"} · ${item.grind || "—"}`;
         info.appendChild(meta);
 
+        const bottom = document.createElement("div");
+        bottom.className = "cart-item-bottom";
+
         const price = document.createElement("p");
         price.className = "cart-item-price";
-        price.textContent = formatCurrency(item.priceValue);
-        info.appendChild(price);
+        const displayValue = parsePriceValue(item);
+        price.textContent =
+          displayValue > 0
+            ? formatCurrency(displayValue)
+            : "—";
+        bottom.appendChild(price);
 
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.className = "cart-item-remove";
+        remove.textContent = "Eliminar";
+        remove.addEventListener("click", () => removeItem(item));
+        bottom.appendChild(remove);
+
+        info.appendChild(bottom);
         row.appendChild(info);
 
         const qty = document.createElement("div");
@@ -106,19 +134,12 @@
         qty.appendChild(plus);
         row.appendChild(qty);
 
-        const remove = document.createElement("button");
-        remove.type = "button";
-        remove.className = "cart-item-remove";
-        remove.textContent = "Eliminar";
-        remove.addEventListener("click", () => removeItem(item));
-        row.appendChild(remove);
-
         itemsContainer.appendChild(row);
       });
     }
 
     const subtotal = cart.items.reduce(
-      (sum, item) => sum + (item.priceValue || 0) * item.qty,
+      (sum, item) => sum + parsePriceValue(item) * item.qty,
       0
     );
     if (subtotalEl) {
@@ -196,6 +217,11 @@
       return;
     }
 
+    if (cart.items.some((item) => !item.priceId)) {
+      console.error("Missing priceId for one or more items.");
+      return;
+    }
+
     try {
       const response = await fetch("/api/create-checkout-session", {
         method: "POST",
@@ -204,6 +230,10 @@
           items: cart.items.map((item) => ({
             priceId: item.priceId,
             quantity: item.qty,
+            size: item.size,
+            grind: item.grind,
+            name: item.name,
+            productId: item.id,
           })),
         }),
       });
