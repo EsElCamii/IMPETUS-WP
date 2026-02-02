@@ -1,2 +1,0 @@
-# IMPETUS
-Website for IMPETUS 
