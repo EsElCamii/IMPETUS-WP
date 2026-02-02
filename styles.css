@@ -1047,7 +1047,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 25px;
 }
 
 .cart-close {
@@ -1326,11 +1326,11 @@ button {
   .hero-inner {
     grid-template-columns: 1fr;
     gap: 24px;
-    padding: 32px 0 24px;
+    padding: 25px 0 24px;
   }
 
   .hero-media {
-    justify-content: flex-start;
+    justify-content: center;
     order: -1;
   }
 
@@ -1465,6 +1465,20 @@ button {
 
   .split-section--bordered .split-inner {
     width: 100%;
+  }
+
+  .quick-add-panel,
+  .quick-add-panel button,
+  .quick-add-option,
+  .quick-add-help,
+  .quick-add-group-header {
+    color: var(--color-text);
+    -webkit-text-fill-color: var(--color-text);
+  }
+
+  .quick-add-submit {
+    color: var(--color-light);
+    -webkit-text-fill-color: var(--color-light);
   }
 }
 
