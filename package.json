@@ -1,0 +1,24 @@
+{
+  "name": "impetus_wp",
+  "version": "1.0.0",
+  "main": "cart.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EsElCamii/IMPETUS.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/EsElCamii/IMPETUS/issues"
+  },
+  "homepage": "https://github.com/EsElCamii/IMPETUS#readme",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.94.1",
+    "stripe": "^20.3.0"
+  }
+}
