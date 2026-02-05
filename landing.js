@@ -3,11 +3,32 @@ const quickAddTitle = document.getElementById("quick-add-title");
 const quickAddSubmit = document.getElementById("quick-add-submit");
 const quickAddQty = document.getElementById("quick-add-qty");
 const quickAddSizeOptions = document.getElementById("quick-add-size-options");
+const quickAddPrice = document.getElementById("quick-add-price");
+const quickAddOldPrice = document.getElementById("quick-add-old-price");
+const quickAddBadge = document.getElementById("quick-add-badge");
+const quickAddPerGram = document.getElementById("quick-add-per-gram");
 const productsSource =
   typeof PRODUCTS !== "undefined"
     ? PRODUCTS
     : window.PRODUCTS || [];
 let activeProduct = null;
+
+const getQuickAddSizes = (product) => {
+  const sizes = Array.isArray(product?.sizes) && product.sizes.length
+    ? product.sizes
+    : [
+        { label: "250g", grams: 250, price: product?.priceValue || 0 },
+        { label: "500g", grams: 500, price: product?.priceValue || 0 },
+        { label: "1kg", grams: 1000, price: product?.priceValue || 0 },
+      ];
+  const minPrice = Math.min(...sizes.map((size) => size.price));
+  const minSize = sizes.reduce(
+    (current, size) => (size.price === minPrice ? size : current),
+    sizes[0]
+  );
+
+  return { sizes, minPrice, minSize };
+};
 
 const openQuickAdd = (product) => {
   if (!quickAddModal) {
@@ -69,20 +90,67 @@ const updateQuickAddSubmit = () => {
   quickAddSubmit.textContent = ready
     ? "Añade al carrito"
     : "Selecciona opciones";
+  updateQuickAddPrice();
+};
+
+const updateQuickAddPrice = () => {
+  if (!activeProduct || !quickAddModal) {
+    return;
+  }
+
+  const { minPrice, minSize } = getQuickAddSizes(activeProduct);
+  const sizeSelected = quickAddModal.querySelector(
+    '.quick-add-option.is-selected[data-option-group="size"]'
+  );
+  const selectedPrice = Number(sizeSelected?.dataset.price);
+  const selectedGrams = Number(sizeSelected?.dataset.grams);
+  const priceValue = Number.isFinite(selectedPrice) && selectedPrice > 0
+    ? selectedPrice
+    : minPrice;
+  const gramsValue = Number.isFinite(selectedGrams) && selectedGrams > 0
+    ? selectedGrams
+    : minSize?.grams || 0;
+
+  if (quickAddPrice) {
+    quickAddPrice.textContent = Number.isFinite(priceValue) ? `$${priceValue}` : "";
+  }
+
+  if (quickAddPerGram) {
+    if (priceValue > 0 && gramsValue > 0) {
+      quickAddPerGram.textContent = `$${(priceValue / gramsValue).toFixed(2)} / g`;
+      quickAddPerGram.style.display = "";
+    } else {
+      quickAddPerGram.textContent = "";
+      quickAddPerGram.style.display = "none";
+    }
+  }
+
+  if (quickAddOldPrice) {
+    if (activeProduct?.originalPrice) {
+      quickAddOldPrice.textContent = activeProduct.originalPrice;
+      quickAddOldPrice.style.display = "";
+    } else {
+      quickAddOldPrice.textContent = "";
+      quickAddOldPrice.style.display = "none";
+    }
+  }
+
+  if (quickAddBadge) {
+    if (activeProduct?.badge) {
+      quickAddBadge.textContent = activeProduct.badge;
+      quickAddBadge.style.display = "";
+    } else {
+      quickAddBadge.textContent = "";
+      quickAddBadge.style.display = "none";
+    }
+  }
 };
 
 const renderQuickAddSizes = (product) => {
   if (!quickAddSizeOptions) {
     return;
   }
-  const sizes = Array.isArray(product?.sizes) && product.sizes.length
-    ? product.sizes
-    : [
-        { label: "250g", grams: 250, price: product?.priceValue || 0 },
-        { label: "500g", grams: 500, price: product?.priceValue || 0 },
-        { label: "1kg", grams: 1000, price: product?.priceValue || 0 },
-      ];
-  const minPrice = Math.min(...sizes.map((size) => size.price));
+  const { sizes, minPrice } = getQuickAddSizes(product);
 
   quickAddSizeOptions.innerHTML = "";
   sizes.forEach((size) => {
