@@ -871,38 +871,31 @@ button {
   margin-bottom: 20px;
 }
 
-.quick-add-price {
+.quick-add-total {
   display: grid;
   gap: 6px;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid #e6ddd2;
-  background: linear-gradient(135deg, rgba(217, 210, 200, 0.2), rgba(255, 255, 255, 0.9));
   margin-bottom: 22px;
 }
 
-.quick-add-price-row {
+.quick-add-total-label {
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.quick-add-total-row {
   margin-bottom: 0;
   gap: 12px;
 }
 
-.quick-add-price-row .product-price {
-  font-size: 24px;
+.quick-add-total-row .product-price {
+  font-size: 28px;
 }
 
-.quick-add-price-row .product-old-price {
-  font-size: 14px;
-}
-
-.quick-add-price-row .product-badge {
+.quick-add-total-row .product-badge {
   font-size: 10px;
   padding: 4px 10px;
-}
-
-.quick-add-price .product-per-gram {
-  margin-bottom: 0;
-  font-size: 12px;
-  color: var(--color-muted);
 }
 
 .quick-add-group {

@@ -3,10 +3,8 @@ const quickAddTitle = document.getElementById("quick-add-title");
 const quickAddSubmit = document.getElementById("quick-add-submit");
 const quickAddQty = document.getElementById("quick-add-qty");
 const quickAddSizeOptions = document.getElementById("quick-add-size-options");
-const quickAddPrice = document.getElementById("quick-add-price");
-const quickAddOldPrice = document.getElementById("quick-add-old-price");
+const quickAddTotal = document.getElementById("quick-add-total");
 const quickAddBadge = document.getElementById("quick-add-badge");
-const quickAddPerGram = document.getElementById("quick-add-per-gram");
 const productsSource =
   typeof PRODUCTS !== "undefined"
     ? PRODUCTS
@@ -22,12 +20,7 @@ const getQuickAddSizes = (product) => {
         { label: "1kg", grams: 1000, price: product?.priceValue || 0 },
       ];
   const minPrice = Math.min(...sizes.map((size) => size.price));
-  const minSize = sizes.reduce(
-    (current, size) => (size.price === minPrice ? size : current),
-    sizes[0]
-  );
-
-  return { sizes, minPrice, minSize };
+  return { sizes, minPrice };
 };
 
 const openQuickAdd = (product) => {
@@ -90,49 +83,27 @@ const updateQuickAddSubmit = () => {
   quickAddSubmit.textContent = ready
     ? "Añade al carrito"
     : "Selecciona opciones";
-  updateQuickAddPrice();
+  updateQuickAddTotal();
 };
 
-const updateQuickAddPrice = () => {
+const updateQuickAddTotal = () => {
   if (!activeProduct || !quickAddModal) {
     return;
   }
 
-  const { minPrice, minSize } = getQuickAddSizes(activeProduct);
+  const { minPrice } = getQuickAddSizes(activeProduct);
   const sizeSelected = quickAddModal.querySelector(
     '.quick-add-option.is-selected[data-option-group="size"]'
   );
   const selectedPrice = Number(sizeSelected?.dataset.price);
-  const selectedGrams = Number(sizeSelected?.dataset.grams);
-  const priceValue = Number.isFinite(selectedPrice) && selectedPrice > 0
+  const unitPrice = Number.isFinite(selectedPrice) && selectedPrice > 0
     ? selectedPrice
     : minPrice;
-  const gramsValue = Number.isFinite(selectedGrams) && selectedGrams > 0
-    ? selectedGrams
-    : minSize?.grams || 0;
+  const qtyValue = Number(quickAddQty?.textContent) || 1;
+  const totalValue = Math.max(1, qtyValue) * (unitPrice || 0);
 
-  if (quickAddPrice) {
-    quickAddPrice.textContent = Number.isFinite(priceValue) ? `$${priceValue}` : "";
-  }
-
-  if (quickAddPerGram) {
-    if (priceValue > 0 && gramsValue > 0) {
-      quickAddPerGram.textContent = `$${(priceValue / gramsValue).toFixed(2)} / g`;
-      quickAddPerGram.style.display = "";
-    } else {
-      quickAddPerGram.textContent = "";
-      quickAddPerGram.style.display = "none";
-    }
-  }
-
-  if (quickAddOldPrice) {
-    if (activeProduct?.originalPrice) {
-      quickAddOldPrice.textContent = activeProduct.originalPrice;
-      quickAddOldPrice.style.display = "";
-    } else {
-      quickAddOldPrice.textContent = "";
-      quickAddOldPrice.style.display = "none";
-    }
+  if (quickAddTotal) {
+    quickAddTotal.textContent = `$${totalValue}`;
   }
 
   if (quickAddBadge) {
@@ -235,6 +206,7 @@ if (quickAddModal) {
       const current = Number(quickAddQty.textContent) || 1;
       const next = Math.max(1, current + delta);
       quickAddQty.textContent = String(next);
+      updateQuickAddTotal();
     });
   });
 
