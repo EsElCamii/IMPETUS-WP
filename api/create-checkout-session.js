@@ -5,7 +5,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 });
 
 const ALLOWED_PRICES = new Set([
-  "price_catuai_250g",
+  "price_1SxGX6CtADenWoLmOjLKR53u",
   "price_catuai_500g",
   "price_catuai_1kg",
   "price_zongolica_250g",

@@ -4,7 +4,7 @@ const PRODUCTS = [
     name: "Catuaí Amarillo",
     price: "Desde $320",
     priceValue: 320,
-    priceId: "price_catuai_500g",
+    priceId: "price_1SxGX6CtADenWoLmOjLKR53u",
     image: "images/node-21.png",
     images: [
       "images/node-21.png",
@@ -20,7 +20,7 @@ const PRODUCTS = [
     weight: "500g",
     badge: "Nuevo",
     sizes: [
-      { label: "250g", grams: 250, price: 320, priceId: "price_catuai_250g" },
+      { label: "250g", grams: 250, price: 320, priceId: "price_1SxGX6CtADenWoLmOjLKR53u" },
       { label: "500g", grams: 500, price: 480, priceId: "price_catuai_500g" },
       { label: "1kg", grams: 1000, price: 860, priceId: "price_catuai_1kg" },
     ],
