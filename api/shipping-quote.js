@@ -16,6 +16,38 @@ const ORIGIN = {
   number: '1',
 };
 
+function normalizeShippingQuoteError(error) {
+  const base = {
+    statusCode: error?.statusCode || 500,
+    error: 'Unable to fetch shipping quote',
+    debug_code: 'SHIPPING_QUOTE_FAILED',
+  };
+
+  const message = String(error?.message || '');
+
+  if (base.statusCode !== 500) {
+    return {
+      statusCode: base.statusCode,
+      error: error.message,
+      debug_code: 'VALIDATION_ERROR',
+    };
+  }
+
+  if (message.includes('Skydropx credentials are not configured')) {
+    return { ...base, debug_code: 'SKYDROPX_CONFIG_MISSING' };
+  }
+
+  if (message.includes('Skydropx auth failed')) {
+    return { ...base, debug_code: 'SKYDROPX_AUTH_FAILED' };
+  }
+
+  if (message.includes('Skydropx request failed')) {
+    return { ...base, debug_code: 'SKYDROPX_QUOTATION_FAILED' };
+  }
+
+  return base;
+}
+
 const DEFAULT_PARCEL = {
   length_cm: 28,
   width_cm: 20,
@@ -79,8 +111,17 @@ module.exports = async function handler(req, res) {
       options,
     });
   } catch (error) {
-    const statusCode = error.statusCode || 500;
-    const message = statusCode === 500 ? 'Unable to fetch shipping quote' : error.message;
-    res.status(statusCode).json({ error: message });
+    const normalized = normalizeShippingQuoteError(error);
+
+    console.error('[shipping_quote_error]', {
+      debug_code: normalized.debug_code,
+      status_code: normalized.statusCode,
+      message: error?.message || 'Unknown shipping quote error',
+    });
+
+    res.status(normalized.statusCode).json({
+      error: normalized.error,
+      debug_code: normalized.debug_code,
+    });
   }
 };

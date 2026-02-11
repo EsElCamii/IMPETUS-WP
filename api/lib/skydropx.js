@@ -1,8 +1,20 @@
 function normalizeApiBase(rawBase) {
-  let base = String(rawBase || 'https://pro.skydropx.com').trim().replace(/\/$/, '');
+  let base = String(rawBase || 'https://pro.skydropx.com').trim();
+
+  if (!base) {
+    base = 'https://pro.skydropx.com';
+  }
+
+  // Accept host value even if scheme was omitted in env vars.
+  if (!/^https?:\/\//i.test(base)) {
+    base = `https://${base}`;
+  }
+
+  base = base.replace(/\/+$/, '');
 
   // Accept host-only base URL even if env was copied with /api/v1 suffix.
   base = base.replace(/\/api\/v1$/i, '');
+  base = base.replace(/\/api$/i, '');
 
   // Backward-compatible fix for legacy host values.
   if (/^https?:\/\/api\.skydropx\.com$/i.test(base)) {
