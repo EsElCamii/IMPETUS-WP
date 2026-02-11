@@ -128,6 +128,16 @@
       return rawText;
     }
 
+    const minDays = parseEstimatedDays(option.estimated_min_days || option.min_days || option.eta_min_days);
+    const maxDays = parseEstimatedDays(option.estimated_max_days || option.max_days || option.eta_max_days);
+
+    if (minDays && maxDays) {
+      if (minDays === maxDays) {
+        return minDays === 1 ? '1 día hábil' : `${minDays} días hábiles`;
+      }
+      return `${Math.min(minDays, maxDays)} a ${Math.max(minDays, maxDays)} días hábiles`;
+    }
+
     const days = parseEstimatedDays(option.estimated_days || option.delivery_days || option.eta_days);
     if (days) {
       return days === 1 ? '1 día hábil' : `${days} días hábiles`;
