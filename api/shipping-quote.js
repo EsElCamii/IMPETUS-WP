@@ -51,28 +51,48 @@ function normalizeShippingQuoteError(error) {
 
   const message = String(error?.message || '');
 
+  if (message.includes('Skydropx credentials are not configured')) {
+    return {
+      ...base,
+      statusCode: 500,
+      error: 'No se pudo cotizar el envío por configuración del servidor.',
+      debug_code: 'SKYDROPX_CONFIG_MISSING',
+    };
+  }
+
+  if (message.includes('Skydropx origin config missing')) {
+    return {
+      ...base,
+      statusCode: 500,
+      error: 'No se pudo cotizar el envío por configuración del servidor.',
+      debug_code: 'SKYDROPX_CONFIG_MISSING',
+    };
+  }
+
+  if (message.includes('Skydropx auth failed')) {
+    return {
+      ...base,
+      statusCode: 502,
+      error: 'No se pudo cotizar el envío en este momento. Intenta nuevamente.',
+      debug_code: 'SKYDROPX_AUTH_FAILED',
+    };
+  }
+
+  if (message.includes('Skydropx request failed')) {
+    return {
+      ...base,
+      statusCode: 502,
+      error: 'No se pudo cotizar el envío para este código postal por ahora. Intenta nuevamente.',
+      debug_code: 'SKYDROPX_QUOTATION_FAILED',
+    };
+  }
+
   if (base.statusCode !== 500) {
     return {
       statusCode: base.statusCode,
       error: error.message,
       debug_code: 'VALIDATION_ERROR',
     };
-  }
-
-  if (message.includes('Skydropx credentials are not configured')) {
-    return { ...base, debug_code: 'SKYDROPX_CONFIG_MISSING' };
-  }
-
-  if (message.includes('Skydropx origin config missing')) {
-    return { ...base, debug_code: 'SKYDROPX_CONFIG_MISSING' };
-  }
-
-  if (message.includes('Skydropx auth failed')) {
-    return { ...base, debug_code: 'SKYDROPX_AUTH_FAILED' };
-  }
-
-  if (message.includes('Skydropx request failed')) {
-    return { ...base, debug_code: 'SKYDROPX_QUOTATION_FAILED' };
   }
 
   return base;
