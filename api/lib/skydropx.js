@@ -536,12 +536,48 @@ function dedupeNormalizedOptions(options) {
     byCompositeKey.set(key, choosePreferredOption(existing, option));
   }
 
-  return Array.from(byCompositeKey.values());
+  const quotePriceDeduped = Array.from(byCompositeKey.values());
+  const byProviderService = new Map();
+
+  for (const option of quotePriceDeduped) {
+    const providerKey = normalizeLabelForKey(option.provider);
+    const serviceKey = normalizeLabelForKey(option.service);
+    const canUseProviderServiceKey =
+      providerKey &&
+      serviceKey &&
+      !isGenericProviderLabel(providerKey) &&
+      !isGenericServiceLabel(serviceKey);
+    const key = canUseProviderServiceKey
+      ? `${providerKey}:${serviceKey}`
+      : `option:${String(option.option_id || '')}:${Number(option.price_mxn).toFixed(2)}`;
+    const existing = byProviderService.get(key);
+
+    if (!existing) {
+      byProviderService.set(key, option);
+      continue;
+    }
+
+    byProviderService.set(key, choosePreferredOption(existing, option));
+  }
+
+  return Array.from(byProviderService.values());
 }
 
 function choosePreferredOption(a, b) {
   if (a.quality !== b.quality) {
     return a.quality === 'strict' ? a : b;
+  }
+
+  if (a.selectable !== b.selectable) {
+    return a.selectable ? a : b;
+  }
+
+  if (a.price_mxn !== b.price_mxn) {
+    return a.price_mxn <= b.price_mxn ? a : b;
+  }
+
+  if (Number.isFinite(a.estimated_days) && Number.isFinite(b.estimated_days) && a.estimated_days !== b.estimated_days) {
+    return a.estimated_days < b.estimated_days ? a : b;
   }
 
   const aWarningsCount = Array.isArray(a.warnings) ? a.warnings.length : 0;
@@ -550,11 +586,25 @@ function choosePreferredOption(a, b) {
     return aWarningsCount < bWarningsCount ? a : b;
   }
 
-  if (a.selectable !== b.selectable) {
-    return a.selectable ? a : b;
-  }
-
   return a;
+}
+
+function normalizeLabelForKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function isGenericProviderLabel(value) {
+  return ['proveedor', 'carrier', 'courier'].includes(value);
+}
+
+function isGenericServiceLabel(value) {
+  return ['servicio', 'servicio estandar', 'servicio estándar', 'standard'].includes(value);
 }
 
 function extractQuotationEntries(responseBody) {
@@ -680,6 +730,26 @@ function delay(ms) {
 }
 
 function shouldRetryEmptyQuoteResponse(responseBody, normalized) {
+  const progress = getQuoteProgressFlags(responseBody, normalized);
+  return (
+    progress.pendingFlags ||
+    (progress.hasQuoteId && progress.hasQuoteContainers) ||
+    progress.hasRawEntries
+  );
+}
+
+function shouldRetryPartialQuoteResponse(responseBody, normalized, optionsCount) {
+  const progress = getQuoteProgressFlags(responseBody, normalized);
+  if (progress.pendingFlags) {
+    return true;
+  }
+
+  const hasDynamicQuoteEnvelope = progress.hasQuoteId && progress.hasQuoteContainers;
+  const isSmallInitialSet = optionsCount > 0 && optionsCount <= 2;
+  return hasDynamicQuoteEnvelope && isSmallInitialSet;
+}
+
+function getQuoteProgressFlags(responseBody, normalized) {
   const statusText = String(responseBody?.status || responseBody?.quotation_scope?.status || '').toLowerCase();
   const pendingFlags =
     responseBody?.is_completed === false ||
@@ -699,7 +769,50 @@ function shouldRetryEmptyQuoteResponse(responseBody, normalized) {
   );
   const hasRawEntries = Number(normalized?.source_count || 0) > 0;
 
-  return pendingFlags || (hasQuoteId && hasQuoteContainers) || hasRawEntries;
+  return {
+    pendingFlags,
+    hasQuoteId,
+    hasQuoteContainers,
+    hasRawEntries,
+  };
+}
+
+function minOptionPrice(optionList) {
+  const prices = (Array.isArray(optionList) ? optionList : [])
+    .map((option) => Number(option?.price_mxn))
+    .filter((price) => Number.isFinite(price) && price > 0);
+
+  if (!prices.length) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.min(...prices);
+}
+
+function isBetterQuoteResult(candidate, currentBest) {
+  if (!currentBest) {
+    return true;
+  }
+
+  const candidateCount = Array.isArray(candidate?.options) ? candidate.options.length : 0;
+  const currentCount = Array.isArray(currentBest?.options) ? currentBest.options.length : 0;
+  if (candidateCount !== currentCount) {
+    return candidateCount > currentCount;
+  }
+
+  const candidateStrict = Number(candidate?.strict_count || 0);
+  const currentStrict = Number(currentBest?.strict_count || 0);
+  if (candidateStrict !== currentStrict) {
+    return candidateStrict > currentStrict;
+  }
+
+  const candidateMinPrice = minOptionPrice(candidate?.options);
+  const currentMinPrice = minOptionPrice(currentBest?.options);
+  if (candidateMinPrice !== currentMinPrice) {
+    return candidateMinPrice < currentMinPrice;
+  }
+
+  return false;
 }
 
 async function createShippingQuoteDetailed(payload) {
@@ -710,6 +823,7 @@ async function createShippingQuoteDetailed(payload) {
 
   for (let i = 0; i < candidates.length; i += 1) {
     const candidate = candidates[i];
+    let bestCandidateResult = null;
     try {
       for (let emptyAttempt = 0; emptyAttempt <= EMPTY_RESPONSE_RETRY_DELAYS_MS.length; emptyAttempt += 1) {
         const result = await skydropxRequest('/api/v1/quotations', candidate);
@@ -725,17 +839,27 @@ async function createShippingQuoteDetailed(payload) {
           raw_response: result,
         };
 
-        if (options.length > 0) {
-          return quoteDetails;
+        if (isBetterQuoteResult(quoteDetails, bestCandidateResult)) {
+          bestCandidateResult = quoteDetails;
         }
 
         lastEmptyResult = quoteDetails;
         const isLastEmptyAttempt = emptyAttempt >= EMPTY_RESPONSE_RETRY_DELAYS_MS.length;
-        if (isLastEmptyAttempt || !shouldRetryEmptyQuoteResponse(result, normalized)) {
+        const shouldRetry =
+          !isLastEmptyAttempt &&
+          (options.length === 0
+            ? shouldRetryEmptyQuoteResponse(result, normalized)
+            : shouldRetryPartialQuoteResponse(result, normalized, options.length));
+
+        if (!shouldRetry) {
           break;
         }
 
         await delay(EMPTY_RESPONSE_RETRY_DELAYS_MS[emptyAttempt]);
+      }
+
+      if (bestCandidateResult && bestCandidateResult.options.length > 0) {
+        return bestCandidateResult;
       }
       continue;
     } catch (error) {
