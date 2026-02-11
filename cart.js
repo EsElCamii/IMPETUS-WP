@@ -264,13 +264,11 @@
     missing_option_id_original: 'Identificador de tarifa reconstruido automáticamente.',
     missing_provider: 'Proveedor no especificado por la paquetería.',
     missing_service: 'Tipo de servicio no especificado por la paquetería.',
-    missing_eta: 'Tiempo estimado no proporcionado por la paquetería.',
     insufficient_metadata_for_checkout: 'No disponible para finalizar compra.',
   };
 
   const OPTION_WARNING_PRIORITY = [
     'insufficient_metadata_for_checkout',
-    'missing_eta',
     'missing_provider',
     'missing_service',
     'missing_option_id_original',
@@ -282,9 +280,6 @@
     }
 
     const warnings = Array.isArray(option?.warnings) ? option.warnings : [];
-    if (!warnings.length) {
-      return 'Tiempo y costo sujetos a confirmación del proveedor.';
-    }
 
     for (const warningCode of OPTION_WARNING_PRIORITY) {
       if (warnings.includes(warningCode) && OPTION_WARNING_MESSAGES[warningCode]) {
@@ -296,7 +291,7 @@
       return 'Información parcial del proveedor.';
     }
 
-    return 'Tiempo y costo sujetos a confirmación del proveedor.';
+    return '';
   };
 
   const isExpressOption = (option) => {
@@ -316,22 +311,9 @@
 
   const getSortedOptions = (options) => {
     const list = Array.isArray(options) ? [...options] : [];
-    const etaValue = (option) => parseEstimatedDays(option?.estimated_days || option?.delivery_days || option?.eta_days);
-
     switch (shippingState.sortBy) {
       case 'highest':
         list.sort((a, b) => Number(b.price_mxn || 0) - Number(a.price_mxn || 0));
-        break;
-      case 'fastest':
-        list.sort((a, b) => {
-          const aDays = etaValue(a);
-          const bDays = etaValue(b);
-          if (aDays === null && bDays === null) return 0;
-          if (aDays === null) return 1;
-          if (bDays === null) return -1;
-          if (aDays !== bDays) return aDays - bDays;
-          return Number(a.price_mxn || 0) - Number(b.price_mxn || 0);
-        });
         break;
       case 'lowest':
       default:
@@ -355,7 +337,6 @@
     select.innerHTML = `
       <option value="lowest">Menor costo</option>
       <option value="highest">Mayor costo</option>
-      <option value="fastest">Entrega más rápida</option>
     `;
     select.value = shippingState.sortBy;
     select.addEventListener('change', () => {
@@ -406,20 +387,12 @@
     etaEl.className = 'shipping-option-meta';
     etaEl.textContent = `Entrega: ${eta}`;
 
-    const hasEtaData = Boolean(
-      toDisplayLabel(option?.estimated_text || option?.estimated_delivery || option?.delivery_time || option?.transit_time, '') ||
-        Number.isFinite(parseEstimatedDays(option?.estimated_days || option?.delivery_days || option?.eta_days))
-    );
-
     const badges = [];
     if (option?.option_id && option.option_id === context.cheapestOptionId) {
       badges.push('Menor costo');
     }
     if (isExpressOption(option)) {
       badges.push('Express');
-    }
-    if (!hasEtaData) {
-      badges.push('ETA pendiente');
     }
 
     if (badges.length) {

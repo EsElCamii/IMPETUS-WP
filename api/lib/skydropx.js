@@ -477,9 +477,6 @@ function normalizeQuotationEntry(value) {
   if (isServicePlaceholder) {
     warnings.push('missing_service');
   }
-  if (!estimatedText && !Number.isFinite(estimatedDays)) {
-    warnings.push('missing_eta');
-  }
 
   const quality = hasStrongOptionId && !isProviderPlaceholder && !isServicePlaceholder ? 'strict' : 'fallback';
   let selectable = true;
