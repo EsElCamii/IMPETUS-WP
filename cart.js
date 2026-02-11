@@ -19,6 +19,7 @@
     options: [],
     selectedOptionId: null,
     postalCode: '',
+    sortBy: 'lowest',
   };
   let isFetchingQuote = false;
   let isCheckoutInProgress = false;
@@ -263,20 +264,83 @@
     if (!isSelectableOption(option)) {
       return 'No disponible para finalizar compra';
     }
-    if (option?.quality === 'fallback') {
+    const warnings = Array.isArray(option?.warnings) ? option.warnings : [];
+    if (option?.quality === 'fallback' && warnings.length) {
       return 'Información parcial del proveedor';
     }
     return '';
   };
 
-  const createOptionSectionHeading = (text) => {
-    const heading = document.createElement('p');
-    heading.className = 'shipping-option-section-title';
-    heading.textContent = text;
-    return heading;
+  const isExpressOption = (option) => {
+    const text = `${toDisplayLabel(option?.provider, '')} ${toDisplayLabel(option?.service, '')}`.toLowerCase();
+    return /express|priori|same day|mismo día|next day|overnight|urgente/.test(text);
   };
 
-  const createShippingOptionRow = (option) => {
+  const getCheapestOptionId = (options) => {
+    if (!Array.isArray(options) || !options.length) {
+      return null;
+    }
+    const ranked = [...options]
+      .filter((option) => Number.isFinite(Number(option?.price_mxn)))
+      .sort((a, b) => Number(a.price_mxn) - Number(b.price_mxn));
+    return ranked[0]?.option_id || null;
+  };
+
+  const getSortedOptions = (options) => {
+    const list = Array.isArray(options) ? [...options] : [];
+    const etaValue = (option) => parseEstimatedDays(option?.estimated_days || option?.delivery_days || option?.eta_days);
+
+    switch (shippingState.sortBy) {
+      case 'highest':
+        list.sort((a, b) => Number(b.price_mxn || 0) - Number(a.price_mxn || 0));
+        break;
+      case 'fastest':
+        list.sort((a, b) => {
+          const aDays = etaValue(a);
+          const bDays = etaValue(b);
+          if (aDays === null && bDays === null) return 0;
+          if (aDays === null) return 1;
+          if (bDays === null) return -1;
+          if (aDays !== bDays) return aDays - bDays;
+          return Number(a.price_mxn || 0) - Number(b.price_mxn || 0);
+        });
+        break;
+      case 'lowest':
+      default:
+        list.sort((a, b) => Number(a.price_mxn || 0) - Number(b.price_mxn || 0));
+        break;
+    }
+
+    return list;
+  };
+
+  const createShippingToolbar = () => {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'shipping-options-toolbar';
+
+    const label = document.createElement('label');
+    label.className = 'shipping-sort-label';
+    label.textContent = 'Ordenar por';
+
+    const select = document.createElement('select');
+    select.className = 'shipping-sort-select';
+    select.innerHTML = `
+      <option value="lowest">Menor costo</option>
+      <option value="highest">Mayor costo</option>
+      <option value="fastest">Entrega más rápida</option>
+    `;
+    select.value = shippingState.sortBy;
+    select.addEventListener('change', () => {
+      shippingState.sortBy = select.value;
+      renderShippingOptions();
+    });
+
+    label.appendChild(select);
+    toolbar.appendChild(label);
+    return toolbar;
+  };
+
+  const createShippingOptionRow = (option, context = {}) => {
     const label = document.createElement('label');
     label.className = 'shipping-option';
     const selectable = isSelectableOption(option);
@@ -313,6 +377,27 @@
     const etaEl = document.createElement('span');
     etaEl.className = 'shipping-option-meta';
     etaEl.textContent = `Entrega: ${eta}`;
+
+    const badges = [];
+    if (option?.option_id && option.option_id === context.cheapestOptionId) {
+      badges.push('Menor costo');
+    }
+    if (isExpressOption(option)) {
+      badges.push('Express');
+    }
+
+    if (badges.length) {
+      const badgesWrap = document.createElement('div');
+      badgesWrap.className = 'shipping-option-tags';
+      badges.forEach((badgeText) => {
+        const badge = document.createElement('span');
+        badge.className = 'shipping-option-tag';
+        badge.textContent = badgeText;
+        badgesWrap.appendChild(badge);
+      });
+      copy.appendChild(badgesWrap);
+    }
+
     copy.appendChild(titleEl);
     copy.appendChild(serviceEl);
     copy.appendChild(etaEl);
@@ -342,22 +427,14 @@
     }
 
     optionsContainer.innerHTML = '';
-    const strictOptions = shippingState.options.filter((option) => option?.quality !== 'fallback');
-    const fallbackOptions = shippingState.options.filter((option) => option?.quality === 'fallback');
+    optionsContainer.appendChild(createShippingToolbar());
 
-    if (strictOptions.length) {
-      optionsContainer.appendChild(createOptionSectionHeading('Opciones recomendadas'));
-      strictOptions.forEach((option) => {
-        optionsContainer.appendChild(createShippingOptionRow(option));
-      });
-    }
+    const sortedOptions = getSortedOptions(shippingState.options);
+    const context = { cheapestOptionId: getCheapestOptionId(shippingState.options) };
 
-    if (fallbackOptions.length) {
-      optionsContainer.appendChild(createOptionSectionHeading('Otros servicios'));
-      fallbackOptions.forEach((option) => {
-        optionsContainer.appendChild(createShippingOptionRow(option));
-      });
-    }
+    sortedOptions.forEach((option) => {
+      optionsContainer.appendChild(createShippingOptionRow(option, context));
+    });
   };
 
   const renderCart = (cart = readCart()) => {
