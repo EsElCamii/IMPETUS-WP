@@ -287,10 +287,6 @@
       }
     }
 
-    if (option?.quality === 'fallback') {
-      return 'Información parcial del proveedor.';
-    }
-
     return '';
   };
 
