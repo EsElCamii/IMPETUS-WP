@@ -128,6 +128,16 @@
       return rawText;
     }
 
+    const minDays = parseEstimatedDays(option.estimated_min_days || option.min_days || option.eta_min_days);
+    const maxDays = parseEstimatedDays(option.estimated_max_days || option.max_days || option.eta_max_days);
+
+    if (minDays && maxDays) {
+      if (minDays === maxDays) {
+        return minDays === 1 ? '1 día hábil' : `${minDays} días hábiles`;
+      }
+      return `${Math.min(minDays, maxDays)} a ${Math.max(minDays, maxDays)} días hábiles`;
+    }
+
     const days = parseEstimatedDays(option.estimated_days || option.delivery_days || option.eta_days);
     if (days) {
       return days === 1 ? '1 día hábil' : `${days} días hábiles`;
@@ -260,14 +270,33 @@
     });
   };
 
+  const OPTION_WARNING_MESSAGES = {
+    missing_option_id_original: 'Identificador de tarifa reconstruido automáticamente.',
+    missing_provider: 'Proveedor no especificado por la paquetería.',
+    missing_service: 'Tipo de servicio no especificado por la paquetería.',
+    insufficient_metadata_for_checkout: 'No disponible para finalizar compra.',
+  };
+
+  const OPTION_WARNING_PRIORITY = [
+    'insufficient_metadata_for_checkout',
+    'missing_provider',
+    'missing_service',
+    'missing_option_id_original',
+  ];
+
   const getOptionNote = (option) => {
     if (!isSelectableOption(option)) {
       return 'No disponible para finalizar compra';
     }
+
     const warnings = Array.isArray(option?.warnings) ? option.warnings : [];
-    if (option?.quality === 'fallback' && warnings.length) {
-      return 'Información parcial del proveedor';
+
+    for (const warningCode of OPTION_WARNING_PRIORITY) {
+      if (warnings.includes(warningCode) && OPTION_WARNING_MESSAGES[warningCode]) {
+        return OPTION_WARNING_MESSAGES[warningCode];
+      }
     }
+
     return '';
   };
 
@@ -288,22 +317,9 @@
 
   const getSortedOptions = (options) => {
     const list = Array.isArray(options) ? [...options] : [];
-    const etaValue = (option) => parseEstimatedDays(option?.estimated_days || option?.delivery_days || option?.eta_days);
-
     switch (shippingState.sortBy) {
       case 'highest':
         list.sort((a, b) => Number(b.price_mxn || 0) - Number(a.price_mxn || 0));
-        break;
-      case 'fastest':
-        list.sort((a, b) => {
-          const aDays = etaValue(a);
-          const bDays = etaValue(b);
-          if (aDays === null && bDays === null) return 0;
-          if (aDays === null) return 1;
-          if (bDays === null) return -1;
-          if (aDays !== bDays) return aDays - bDays;
-          return Number(a.price_mxn || 0) - Number(b.price_mxn || 0);
-        });
         break;
       case 'lowest':
       default:
@@ -327,7 +343,6 @@
     select.innerHTML = `
       <option value="lowest">Menor costo</option>
       <option value="highest">Mayor costo</option>
-      <option value="fastest">Entrega más rápida</option>
     `;
     select.value = shippingState.sortBy;
     select.addEventListener('change', () => {

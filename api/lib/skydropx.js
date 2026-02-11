@@ -320,6 +320,11 @@ function pickEstimatedDays(value) {
     value.business_days,
     value.min_days,
     value.max_days,
+    value.eta_min_days,
+    value.eta_max_days,
+    value.delivery_estimate?.min_days,
+    value.delivery_estimate?.max_days,
+    value.service_level?.estimated_days,
   ];
 
   for (const candidate of dayCandidates) {
@@ -345,6 +350,39 @@ function pickEstimatedDays(value) {
   return null;
 }
 
+function pickEstimatedDayRange(value) {
+  const minCandidate = pickEstimatedDays({
+    estimated_delivery_days: value.min_days,
+    estimated_days: value.eta_min_days,
+    delivery_days: value.delivery_estimate?.min_days,
+    delivery_time_days: value.service_level?.min_days,
+  });
+
+  const maxCandidate = pickEstimatedDays({
+    estimated_delivery_days: value.max_days,
+    estimated_days: value.eta_max_days,
+    delivery_days: value.delivery_estimate?.max_days,
+    delivery_time_days: value.service_level?.max_days,
+  });
+
+  if (Number.isFinite(minCandidate) && Number.isFinite(maxCandidate)) {
+    return {
+      min: Math.min(minCandidate, maxCandidate),
+      max: Math.max(minCandidate, maxCandidate),
+    };
+  }
+
+  if (Number.isFinite(minCandidate)) {
+    return { min: minCandidate, max: null };
+  }
+
+  if (Number.isFinite(maxCandidate)) {
+    return { min: null, max: maxCandidate };
+  }
+
+  return { min: null, max: null };
+}
+
 function pickEstimatedText(value) {
   const text = pickText(
     value.estimated_delivery_text,
@@ -352,7 +390,10 @@ function pickEstimatedText(value) {
     value.delivery_time_text,
     value.delivery_time_label,
     value.delivery_time,
+    value.estimated_delivery_time,
+    value.delivery_window,
     value.transit_time,
+    value.transit_days_text,
     value.eta_text,
     value.eta,
     value.estimated_arrival,
@@ -360,7 +401,8 @@ function pickEstimatedText(value) {
     value.promise,
     value.schedule,
     value.service_level?.delivery_time,
-    value.service_level?.estimated_delivery
+    value.service_level?.estimated_delivery,
+    value.service_level?.eta
   );
 
   if (!text || /^\d+$/.test(text)) {
@@ -456,6 +498,7 @@ function normalizeQuotationEntry(value) {
   );
   const quotationId = String(value.quotation_id || value.quote_id || value.id || '').trim();
   const estimatedDays = pickEstimatedDays(value);
+  const estimatedRange = pickEstimatedDayRange(value);
   const estimatedText = pickEstimatedText(value);
 
   if (!quotationId || !Number.isFinite(amount) || amount <= 0) {
@@ -494,6 +537,8 @@ function normalizeQuotationEntry(value) {
     service,
     price_mxn: priceMxn,
     estimated_days: estimatedDays,
+    estimated_min_days: estimatedRange.min,
+    estimated_max_days: estimatedRange.max,
     estimated_text: estimatedText,
     quotation_id: quotationId,
     quality,
