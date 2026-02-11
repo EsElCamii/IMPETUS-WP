@@ -170,6 +170,8 @@ module.exports = async function handler(req, res) {
 
     const quoteResult = await createShippingQuoteDetailed(quotationPayload);
     const options = quoteResult.options;
+    const strictCount = Number(quoteResult.strict_count || 0);
+    const fallbackCount = Number(quoteResult.fallback_count || 0);
 
     if (!options.length) {
       console.warn('[shipping_quote_no_options]', {
@@ -177,12 +179,16 @@ module.exports = async function handler(req, res) {
         total_weight_grams: totalWeight,
         source_count: quoteResult.source_count,
         normalized_count: quoteResult.normalized_count,
+        strict_count: strictCount,
+        fallback_count: fallbackCount,
         candidate_index: quoteResult.candidate_index,
         response_summary: summarizeSkydropxResponse(quoteResult.raw_response),
       });
       res.status(404).json({
         error: 'No hay opciones de envío disponibles para este código postal.',
         debug_code: 'NO_SHIPPING_OPTIONS',
+        strict_count: strictCount,
+        fallback_count: fallbackCount,
       });
       return;
     }
@@ -201,6 +207,8 @@ module.exports = async function handler(req, res) {
       quote_token: signedQuote,
       expires_at: expiresAt,
       ttl_ms: QUOTE_TTL_MS,
+      strict_count: strictCount,
+      fallback_count: fallbackCount,
       options,
     });
   } catch (error) {
@@ -218,6 +226,8 @@ module.exports = async function handler(req, res) {
       skydropx_url: error?.requestUrl || null,
       skydropx_response: error?.responseBody || null,
       skydropx_attempts: error?.attempts || null,
+      strict_count: error?.strict_count ?? null,
+      fallback_count: error?.fallback_count ?? null,
       request_payload: requestPayloadPreview,
     });
 

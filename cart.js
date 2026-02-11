@@ -188,17 +188,26 @@
   const getSelectedOption = () =>
     shippingState.options.find((option) => option.option_id === shippingState.selectedOptionId) || null;
 
+  const isSelectableOption = (option) => Boolean(option && option.selectable !== false);
+
   const updateSummary = (cart = readCart()) => {
     const subtotal = cart.items.reduce((sum, item) => sum + parsePriceValue(item) * item.qty, 0);
     const selectedOption = getSelectedOption();
-    const shipping = selectedOption ? Number(selectedOption.price_mxn || 0) : 0;
+    const hasSelectableOption = isSelectableOption(selectedOption);
+    const shipping = hasSelectableOption ? Number(selectedOption.price_mxn || 0) : 0;
 
     if (subtotalEl) subtotalEl.textContent = formatCurrency(subtotal);
-    if (shippingEl) shippingEl.textContent = selectedOption ? formatCurrency(shipping) : 'Pendiente';
+    if (shippingEl) {
+      shippingEl.textContent = selectedOption
+        ? hasSelectableOption
+          ? formatCurrency(shipping)
+          : 'No disponible'
+        : 'Pendiente';
+    }
     if (totalEl) totalEl.textContent = formatCurrency(subtotal + shipping);
 
     if (checkoutButton) {
-      checkoutButton.disabled = isCheckoutInProgress || cart.items.length === 0 || !selectedOption;
+      checkoutButton.disabled = isCheckoutInProgress || cart.items.length === 0 || !hasSelectableOption;
     }
   };
 
@@ -250,51 +259,105 @@
     });
   };
 
+  const getOptionNote = (option) => {
+    if (!isSelectableOption(option)) {
+      return 'No disponible para finalizar compra';
+    }
+    if (option?.quality === 'fallback') {
+      return 'Información parcial del proveedor';
+    }
+    return '';
+  };
+
+  const createOptionSectionHeading = (text) => {
+    const heading = document.createElement('p');
+    heading.className = 'shipping-option-section-title';
+    heading.textContent = text;
+    return heading;
+  };
+
+  const createShippingOptionRow = (option) => {
+    const label = document.createElement('label');
+    label.className = 'shipping-option';
+    const selectable = isSelectableOption(option);
+    if (!selectable) {
+      label.classList.add('is-disabled');
+    }
+
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.name = 'shipping-option';
+    radio.value = option.option_id;
+    radio.checked = selectable && shippingState.selectedOptionId === option.option_id;
+    radio.disabled = !selectable;
+    if (selectable) {
+      radio.addEventListener('change', () => {
+        shippingState.selectedOptionId = option.option_id;
+        updateSummary(readCart());
+        renderShippingOptions();
+      });
+    }
+
+    const copy = document.createElement('div');
+    copy.className = 'shipping-option-copy';
+    const provider = prettifyLabel(toDisplayLabel(option.provider, 'Paquetería'));
+    const service = prettifyLabel(toDisplayLabel(option.service, ''));
+    const eta = formatEta(option);
+    const serviceText =
+      service && service.toLowerCase() !== provider.toLowerCase() ? service : 'Servicio estándar';
+
+    const titleEl = document.createElement('strong');
+    titleEl.textContent = provider;
+    const serviceEl = document.createElement('span');
+    serviceEl.textContent = serviceText;
+    const etaEl = document.createElement('span');
+    etaEl.className = 'shipping-option-meta';
+    etaEl.textContent = `Entrega: ${eta}`;
+    copy.appendChild(titleEl);
+    copy.appendChild(serviceEl);
+    copy.appendChild(etaEl);
+
+    const note = getOptionNote(option);
+    if (note) {
+      const noteEl = document.createElement('span');
+      noteEl.className = 'shipping-option-note';
+      noteEl.textContent = note;
+      copy.appendChild(noteEl);
+    }
+
+    const price = document.createElement('span');
+    price.className = 'shipping-option-price';
+    price.textContent = formatCurrency(Number(option.price_mxn || 0));
+
+    label.classList.toggle('is-selected', shippingState.selectedOptionId === option.option_id);
+    label.appendChild(radio);
+    label.appendChild(copy);
+    label.appendChild(price);
+    return label;
+  };
+
   const renderShippingOptions = () => {
     if (!optionsContainer) {
       return;
     }
 
     optionsContainer.innerHTML = '';
+    const strictOptions = shippingState.options.filter((option) => option?.quality !== 'fallback');
+    const fallbackOptions = shippingState.options.filter((option) => option?.quality === 'fallback');
 
-    shippingState.options.forEach((option) => {
-      const label = document.createElement('label');
-      label.className = 'shipping-option';
-
-      const radio = document.createElement('input');
-      radio.type = 'radio';
-      radio.name = 'shipping-option';
-      radio.value = option.option_id;
-      radio.checked = shippingState.selectedOptionId === option.option_id;
-      radio.addEventListener('change', () => {
-        shippingState.selectedOptionId = option.option_id;
-        updateSummary(readCart());
+    if (strictOptions.length) {
+      optionsContainer.appendChild(createOptionSectionHeading('Opciones recomendadas'));
+      strictOptions.forEach((option) => {
+        optionsContainer.appendChild(createShippingOptionRow(option));
       });
+    }
 
-      const copy = document.createElement('div');
-      copy.className = 'shipping-option-copy';
-      const provider = prettifyLabel(toDisplayLabel(option.provider, 'Paquetería'));
-      const service = prettifyLabel(toDisplayLabel(option.service, ''));
-      const eta = formatEta(option);
-      const serviceText =
-        service && service.toLowerCase() !== provider.toLowerCase() ? service : 'Servicio estándar';
-      copy.innerHTML = `
-        <strong>${provider}</strong>
-        <span>${serviceText}</span>
-        <span class="shipping-option-meta">Entrega: ${eta}</span>
-      `;
-
-      const price = document.createElement('span');
-      price.className = 'shipping-option-price';
-      price.textContent = formatCurrency(Number(option.price_mxn || 0));
-
-      label.classList.toggle('is-selected', shippingState.selectedOptionId === option.option_id);
-
-      label.appendChild(radio);
-      label.appendChild(copy);
-      label.appendChild(price);
-      optionsContainer.appendChild(label);
-    });
+    if (fallbackOptions.length) {
+      optionsContainer.appendChild(createOptionSectionHeading('Otros servicios'));
+      fallbackOptions.forEach((option) => {
+        optionsContainer.appendChild(createShippingOptionRow(option));
+      });
+    }
   };
 
   const renderCart = (cart = readCart()) => {
@@ -490,7 +553,11 @@
       shippingState.quoteToken = data.quote_token;
       shippingState.options = Array.isArray(data.options) ? data.options : [];
       shippingState.postalCode = postalCode;
-      shippingState.selectedOptionId = shippingState.options[0]?.option_id || null;
+      const firstRecommendedSelectable = shippingState.options.find(
+        (option) => option?.quality !== 'fallback' && isSelectableOption(option)
+      );
+      const firstSelectable = shippingState.options.find((option) => isSelectableOption(option));
+      shippingState.selectedOptionId = firstRecommendedSelectable?.option_id || firstSelectable?.option_id || null;
 
       if (!shippingState.options.length) {
         throw new Error('No hay opciones de envío disponibles para este código postal.');
@@ -499,7 +566,11 @@
       renderShippingOptions();
       updateSummary(cart);
       if (quoteFeedback) {
-        quoteFeedback.textContent = 'Selecciona una opción de envío para continuar.';
+        if (!firstSelectable) {
+          quoteFeedback.textContent = 'Hay opciones informativas, pero ninguna disponible para finalizar compra.';
+        } else {
+          quoteFeedback.textContent = 'Selecciona una opción de envío para continuar.';
+        }
       }
     } catch (error) {
       const isNetworkError = error?.name === 'TypeError' && /fetch/i.test(String(error?.message || ''));
@@ -528,9 +599,18 @@
       return;
     }
 
-    if (!shippingState.quoteId || !shippingState.selectedOptionId) {
+    const selectedOption = getSelectedOption();
+
+    if (!shippingState.quoteId || !shippingState.selectedOptionId || !selectedOption) {
       if (quoteFeedback) {
         quoteFeedback.textContent = 'Primero cotiza y selecciona un envío.';
+      }
+      return;
+    }
+
+    if (!isSelectableOption(selectedOption)) {
+      if (quoteFeedback) {
+        quoteFeedback.textContent = 'La opción de envío seleccionada no está disponible para finalizar compra.';
       }
       return;
     }

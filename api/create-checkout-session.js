@@ -45,6 +45,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    if (shippingOption.quality === 'fallback' && shippingOption.selectable === false) {
+      res.status(400).json({ error: 'La opción de envío seleccionada no es válida para procesar el envío.' });
+      return;
+    }
+
+    const shippingPrice = Number(shippingOption.price_mxn);
+    if (!shippingOption.quotation_id || !Number.isFinite(shippingPrice) || shippingPrice <= 0) {
+      res.status(400).json({ error: 'La opción de envío seleccionada no es válida para finalizar compra.' });
+      return;
+    }
+
     const productLineItems = items.map((item) => {
       const catalogEntry = getCatalogEntryByPriceId(item.priceId);
       if (!catalogEntry) {
@@ -68,8 +79,8 @@ module.exports = async function handler(req, res) {
       };
     });
 
-    const shippingAmountCents = Math.round(Number(shippingOption.price_mxn) * 100);
-    if (!Number.isInteger(shippingAmountCents) || shippingAmountCents < 0) {
+    const shippingAmountCents = Math.round(shippingPrice * 100);
+    if (!Number.isInteger(shippingAmountCents) || shippingAmountCents <= 0) {
       throw new Error('Invalid shipping amount');
     }
 

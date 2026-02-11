@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 function normalizeApiBase(rawBase) {
   let base = String(rawBase || 'https://pro.skydropx.com').trim();
 
@@ -370,84 +372,189 @@ function pickEstimatedText(value) {
 
 function normalizeQuotationsResponse(responseBody) {
   const source = extractQuotationEntries(responseBody);
+  const normalized = source
+    .map((entry) => normalizeQuotationEntry(flattenQuotationEntry(entry)))
+    .filter(Boolean);
 
-  return source
-    .map((entry) => {
-      const value = flattenQuotationEntry(entry);
-      const optionId = String(
-        value.option_id ||
-        value.id ||
-        value.quote_id ||
-        value.quotation_id ||
-        value.rate_id ||
-        value.service_code ||
-        value.__rate_key ||
-        ''
-      ).trim();
-      const provider =
-        pickText(
-          value.provider_name,
-          value.provider?.name,
-          value.provider?.display_name,
-          value.provider?.title,
-          value.provider?.label,
-          value.carrier,
-          value.courier,
-          value.company,
-          value.__rate_key,
-          value.provider
-        ) || 'Proveedor';
-      const service =
-        pickText(
-          value.service_level_name,
-          value.service_level?.name,
-          value.service_name,
-          value.service?.name,
-          value.service?.service_level_name,
-          value.delivery_type,
-          value.product,
-          value.name,
-          value.service_code,
-          value.service
-        ) || 'Servicio estándar';
-      const amount = pickFiniteNumber(
-        value.total_pricing ||
-        value.total_price ||
-        value.total ||
-        value.total_cost ||
-        value.total_amount ||
-        value.final_price ||
-        value.rate ||
-        value.cost ||
-        value.price ||
-        value.amount ||
-        value.pricing?.total ||
-        value.pricing?.price ||
-        value.pricing?.amount ||
-        value.pricing?.final_price ||
-        value.cost_breakdown?.total ||
-        0
-      );
-      const quotationId = String(value.quotation_id || value.quote_id || value.id || optionId || '').trim();
-      const estimatedDays = pickEstimatedDays(value);
-      const estimatedText = pickEstimatedText(value);
-
-      if (!optionId || !quotationId || !Number.isFinite(amount) || amount <= 0) {
-        return null;
-      }
-
-      return {
-        option_id: optionId,
-        provider,
-        service,
-        price_mxn: Math.round(amount * 100) / 100,
-        estimated_days: estimatedDays,
-        estimated_text: estimatedText,
-        quotation_id: quotationId,
-      };
-    })
-    .filter(Boolean)
+  const deduped = dedupeNormalizedOptions(normalized);
+  const strictOptions = deduped
+    .filter((option) => option.quality === 'strict')
     .sort((a, b) => a.price_mxn - b.price_mxn);
+  const fallbackOptions = deduped
+    .filter((option) => option.quality === 'fallback')
+    .sort((a, b) => a.price_mxn - b.price_mxn);
+  const options = [...strictOptions, ...fallbackOptions];
+
+  return {
+    source_count: source.length,
+    strictOptions,
+    fallbackOptions,
+    options,
+  };
+}
+
+function normalizeQuotationEntry(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  const { value: optionIdCandidate, source: optionIdSource } = pickSourceAndText([
+    { source: 'option_id', value: value.option_id },
+    { source: 'id', value: value.id },
+    { source: 'quote_id', value: value.quote_id },
+    { source: 'quotation_id', value: value.quotation_id },
+    { source: 'rate_id', value: value.rate_id },
+    { source: 'service_code', value: value.service_code },
+    { source: '__rate_key', value: value.__rate_key },
+  ]);
+
+  const { value: providerFromPayload } = pickSourceAndText([
+    { source: 'provider_name', value: value.provider_name },
+    { source: 'provider.name', value: value.provider?.name },
+    { source: 'provider.display_name', value: value.provider?.display_name },
+    { source: 'provider.title', value: value.provider?.title },
+    { source: 'provider.label', value: value.provider?.label },
+    { source: 'carrier', value: value.carrier },
+    { source: 'courier', value: value.courier },
+    { source: 'company', value: value.company },
+    { source: '__rate_key', value: value.__rate_key },
+    { source: 'provider', value: value.provider },
+  ]);
+
+  const { value: serviceFromPayload } = pickSourceAndText([
+    { source: 'service_level_name', value: value.service_level_name },
+    { source: 'service_level.name', value: value.service_level?.name },
+    { source: 'service_name', value: value.service_name },
+    { source: 'service.name', value: value.service?.name },
+    { source: 'service.service_level_name', value: value.service?.service_level_name },
+    { source: 'delivery_type', value: value.delivery_type },
+    { source: 'product', value: value.product },
+    { source: 'name', value: value.name },
+    { source: 'service_code', value: value.service_code },
+    { source: 'service', value: value.service },
+  ]);
+
+  const provider = providerFromPayload || 'Proveedor';
+  const service = serviceFromPayload || 'Servicio estándar';
+  const amount = pickFiniteNumber(
+    value.total_pricing ||
+    value.total_price ||
+    value.total ||
+    value.total_cost ||
+    value.total_amount ||
+    value.final_price ||
+    value.rate ||
+    value.cost ||
+    value.price ||
+    value.amount ||
+    value.pricing?.total ||
+    value.pricing?.price ||
+    value.pricing?.amount ||
+    value.pricing?.final_price ||
+    value.cost_breakdown?.total ||
+    0
+  );
+  const quotationId = String(value.quotation_id || value.quote_id || value.id || '').trim();
+  const estimatedDays = pickEstimatedDays(value);
+  const estimatedText = pickEstimatedText(value);
+
+  if (!quotationId || !Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+
+  const priceMxn = Math.round(amount * 100) / 100;
+  const warnings = [];
+  const isProviderPlaceholder = !providerFromPayload;
+  const isServicePlaceholder = !serviceFromPayload;
+  const hasStrongOptionId = optionIdCandidate && optionIdSource && optionIdSource !== '__rate_key';
+
+  if (!optionIdCandidate || optionIdSource === '__rate_key') {
+    warnings.push('missing_option_id_original');
+  }
+  if (isProviderPlaceholder) {
+    warnings.push('missing_provider');
+  }
+  if (isServicePlaceholder) {
+    warnings.push('missing_service');
+  }
+
+  const quality = hasStrongOptionId && !isProviderPlaceholder && !isServicePlaceholder ? 'strict' : 'fallback';
+  let selectable = true;
+  if (quality === 'fallback' && isProviderPlaceholder && isServicePlaceholder) {
+    selectable = false;
+    warnings.push('insufficient_metadata_for_checkout');
+  }
+
+  const optionId = optionIdCandidate || createFallbackOptionId(quotationId, priceMxn, provider, service);
+  const uniqueWarnings = Array.from(new Set(warnings));
+
+  return {
+    option_id: optionId,
+    provider,
+    service,
+    price_mxn: priceMxn,
+    estimated_days: estimatedDays,
+    estimated_text: estimatedText,
+    quotation_id: quotationId,
+    quality,
+    selectable,
+    warnings: uniqueWarnings.length ? uniqueWarnings : undefined,
+  };
+}
+
+function pickSourceAndText(candidates) {
+  for (const candidate of candidates) {
+    const text = pickText(candidate?.value);
+    if (text) {
+      return {
+        value: text,
+        source: candidate.source,
+      };
+    }
+  }
+
+  return { value: '', source: '' };
+}
+
+function createFallbackOptionId(quotationId, priceMxn, provider, service) {
+  const seed = `${quotationId}|${Number(priceMxn).toFixed(2)}|${provider}|${service}`;
+  const hash = crypto.createHash('sha1').update(seed).digest('hex').slice(0, 12);
+  return `fb_${hash}`;
+}
+
+function dedupeNormalizedOptions(options) {
+  const byCompositeKey = new Map();
+
+  for (const option of options) {
+    const key = `${option.quotation_id}:${Number(option.price_mxn).toFixed(2)}`;
+    const existing = byCompositeKey.get(key);
+    if (!existing) {
+      byCompositeKey.set(key, option);
+      continue;
+    }
+
+    byCompositeKey.set(key, choosePreferredOption(existing, option));
+  }
+
+  return Array.from(byCompositeKey.values());
+}
+
+function choosePreferredOption(a, b) {
+  if (a.quality !== b.quality) {
+    return a.quality === 'strict' ? a : b;
+  }
+
+  const aWarningsCount = Array.isArray(a.warnings) ? a.warnings.length : 0;
+  const bWarningsCount = Array.isArray(b.warnings) ? b.warnings.length : 0;
+  if (aWarningsCount !== bWarningsCount) {
+    return aWarningsCount < bWarningsCount ? a : b;
+  }
+
+  if (a.selectable !== b.selectable) {
+    return a.selectable ? a : b;
+  }
+
+  return a;
 }
 
 function extractQuotationEntries(responseBody) {
@@ -576,12 +683,14 @@ async function createShippingQuoteDetailed(payload) {
     const candidate = candidates[i];
     try {
       const result = await skydropxRequest('/api/v1/quotations', candidate);
-      const source = extractQuotationEntries(result);
-      const options = normalizeQuotationsResponse(result);
+      const normalized = normalizeQuotationsResponse(result);
+      const options = normalized.options;
 
       return {
         options,
-        source_count: source.length,
+        strict_count: normalized.strictOptions.length,
+        fallback_count: normalized.fallbackOptions.length,
+        source_count: normalized.source_count,
         normalized_count: options.length,
         candidate_index: i,
         raw_response: result,
