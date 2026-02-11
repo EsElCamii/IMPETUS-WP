@@ -279,6 +279,95 @@ function buildQuotePayloadCandidates(payload) {
   ];
 }
 
+function pickText(...candidates) {
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' || typeof candidate === 'number') {
+      const text = String(candidate).trim();
+      if (text && text !== '[object Object]') {
+        return text;
+      }
+      continue;
+    }
+
+    if (candidate && typeof candidate === 'object') {
+      const nestedText = pickText(
+        candidate.name,
+        candidate.display_name,
+        candidate.title,
+        candidate.label,
+        candidate.code,
+        candidate.service_level_name,
+        candidate.description
+      );
+      if (nestedText) {
+        return nestedText;
+      }
+    }
+  }
+  return '';
+}
+
+function pickEstimatedDays(value) {
+  const dayCandidates = [
+    value.estimated_delivery_days,
+    value.estimated_days,
+    value.delivery_days,
+    value.delivery_time_days,
+    value.eta_days,
+    value.transit_days,
+    value.business_days,
+    value.min_days,
+    value.max_days,
+  ];
+
+  for (const candidate of dayCandidates) {
+    if (candidate === null || candidate === undefined || candidate === '') {
+      continue;
+    }
+    const numeric = Number(candidate);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return Math.round(numeric);
+    }
+
+    if (typeof candidate === 'string') {
+      const match = candidate.match(/(\d+(?:\.\d+)?)/);
+      if (match) {
+        const parsed = Number(match[1]);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          return Math.round(parsed);
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function pickEstimatedText(value) {
+  const text = pickText(
+    value.estimated_delivery_text,
+    value.estimated_delivery,
+    value.delivery_time_text,
+    value.delivery_time_label,
+    value.delivery_time,
+    value.transit_time,
+    value.eta_text,
+    value.eta,
+    value.estimated_arrival,
+    value.delivery_promise,
+    value.promise,
+    value.schedule,
+    value.service_level?.delivery_time,
+    value.service_level?.estimated_delivery
+  );
+
+  if (!text || /^\d+$/.test(text)) {
+    return null;
+  }
+
+  return text;
+}
+
 function normalizeQuotationsResponse(responseBody) {
   const source = extractQuotationEntries(responseBody);
 
@@ -295,29 +384,32 @@ function normalizeQuotationsResponse(responseBody) {
         value.__rate_key ||
         ''
       ).trim();
-      const provider = String(
-        value.provider?.name ||
-        value.provider?.display_name ||
-        value.provider?.title ||
-        value.provider_name ||
-        value.carrier ||
-        value.courier ||
-        value.company ||
-        value.__rate_key ||
-        value.provider ||
-        'Proveedor'
-      ).trim();
-      const service = String(
-        value.service_level_name ||
-        value.service_level?.name ||
-        value.service?.name ||
-        value.delivery_type ||
-        value.product ||
-        value.service_name ||
-        value.service ||
-        value.name ||
-        'Servicio estándar'
-      ).trim();
+      const provider =
+        pickText(
+          value.provider_name,
+          value.provider?.name,
+          value.provider?.display_name,
+          value.provider?.title,
+          value.provider?.label,
+          value.carrier,
+          value.courier,
+          value.company,
+          value.__rate_key,
+          value.provider
+        ) || 'Proveedor';
+      const service =
+        pickText(
+          value.service_level_name,
+          value.service_level?.name,
+          value.service_name,
+          value.service?.name,
+          value.service?.service_level_name,
+          value.delivery_type,
+          value.product,
+          value.name,
+          value.service_code,
+          value.service
+        ) || 'Servicio estándar';
       const amount = pickFiniteNumber(
         value.total_pricing ||
         value.total_price ||
@@ -337,16 +429,8 @@ function normalizeQuotationsResponse(responseBody) {
         0
       );
       const quotationId = String(value.quotation_id || value.quote_id || value.id || optionId || '').trim();
-      const estimatedDays = Number(
-        value.estimated_delivery_days ||
-        value.estimated_days ||
-        value.delivery_days ||
-        value.delivery_time_days ||
-        value.eta_days ||
-        value.transit_time ||
-        value.transit_days ||
-        0
-      ) || null;
+      const estimatedDays = pickEstimatedDays(value);
+      const estimatedText = pickEstimatedText(value);
 
       if (!optionId || !quotationId || !Number.isFinite(amount) || amount <= 0) {
         return null;
@@ -358,6 +442,7 @@ function normalizeQuotationsResponse(responseBody) {
         service,
         price_mxn: Math.round(amount * 100) / 100,
         estimated_days: estimatedDays,
+        estimated_text: estimatedText,
         quotation_id: quotationId,
       };
     })
@@ -430,6 +515,7 @@ function toEntryArray(candidate) {
       'total_price',
       'total_pricing',
       'amount',
+      'provider_name',
       'provider',
       'service',
       'service_level_name',

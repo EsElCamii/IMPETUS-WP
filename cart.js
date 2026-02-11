@@ -20,6 +20,8 @@
     selectedOptionId: null,
     postalCode: '',
   };
+  let isFetchingQuote = false;
+  let isCheckoutInProgress = false;
 
   const formatCurrency = (value) => {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -44,20 +46,143 @@
   const toDisplayLabel = (value, fallback = '') => {
     if (typeof value === 'string' || typeof value === 'number') {
       const normalized = String(value).trim();
-      return normalized || fallback;
+      if (normalized && normalized !== '[object Object]') {
+        return normalized;
+      }
+      return fallback;
     }
     if (value && typeof value === 'object') {
       const candidates = [value.name, value.display_name, value.title, value.label, value.code];
       for (const candidate of candidates) {
         if (typeof candidate === 'string' || typeof candidate === 'number') {
           const normalized = String(candidate).trim();
-          if (normalized) {
+          if (normalized && normalized !== '[object Object]') {
             return normalized;
           }
         }
       }
     }
     return fallback;
+  };
+
+  const parseEstimatedDays = (value) => {
+    const numeric = Number(value);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return Math.round(numeric);
+    }
+    if (typeof value === 'string') {
+      const match = value.match(/(\d+(?:\.\d+)?)/);
+      if (match) {
+        const parsed = Number(match[1]);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          return Math.round(parsed);
+        }
+      }
+    }
+    return null;
+  };
+
+  const KNOWN_PROVIDER_LABELS = {
+    dhl: 'DHL',
+    fedex: 'FedEx',
+    estafeta: 'Estafeta',
+    ninetynineminutes: '99minutos',
+    '99minutos': '99minutos',
+  };
+
+  const prettifyLabel = (text) => {
+    const normalized = String(text || '')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!normalized) {
+      return '';
+    }
+
+    const collapsed = normalized.toLowerCase().replace(/\s+/g, '');
+    if (KNOWN_PROVIDER_LABELS[collapsed]) {
+      return KNOWN_PROVIDER_LABELS[collapsed];
+    }
+
+    return normalized
+      .split(' ')
+      .map((word) => {
+        if (/^\d+$/.test(word)) {
+          return word;
+        }
+        if (word.length <= 3) {
+          return word.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      })
+      .join(' ');
+  };
+
+  const formatEta = (option) => {
+    const rawText = toDisplayLabel(
+      option.estimated_text || option.estimated_delivery || option.delivery_time || option.transit_time,
+      ''
+    );
+    if (rawText) {
+      return rawText;
+    }
+
+    const days = parseEstimatedDays(option.estimated_days || option.delivery_days || option.eta_days);
+    if (days) {
+      return days === 1 ? '1 día hábil' : `${days} días hábiles`;
+    }
+
+    return 'Tiempo por confirmar';
+  };
+
+  const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+  const getFriendlyQuoteError = (statusCode, payload) => {
+    const debugCode = String(payload?.debug_code || '').trim();
+    const rawMessage = String(payload?.error || '').trim();
+
+    if (debugCode === 'NO_SHIPPING_OPTIONS' || statusCode === 404) {
+      return 'No hay opciones de envío disponibles para este código postal.';
+    }
+    if (debugCode === 'SKYDROPX_CONFIG_MISSING') {
+      return 'No se pudo cotizar el envío por configuración del servidor.';
+    }
+    if (debugCode === 'SKYDROPX_AUTH_FAILED' || debugCode === 'SKYDROPX_QUOTATION_FAILED' || statusCode === 502) {
+      return 'No se pudo cotizar el envío en este momento. Intenta nuevamente.';
+    }
+    if (statusCode === 400) {
+      return 'Revisa el código postal e intenta de nuevo.';
+    }
+    if (/Skydropx request failed/i.test(rawMessage)) {
+      return 'No se pudo cotizar el envío para este código postal por ahora.';
+    }
+    return rawMessage || 'No se pudo cotizar el envío.';
+  };
+
+  const setQuoteButtonLoading = (isLoading) => {
+    if (!quoteButton) {
+      return;
+    }
+    if (!quoteButton.dataset.defaultLabel) {
+      quoteButton.dataset.defaultLabel = quoteButton.textContent.trim() || 'Cotizar';
+    }
+    quoteButton.classList.toggle('is-loading', isLoading);
+    quoteButton.textContent = isLoading ? 'Cotizando...' : quoteButton.dataset.defaultLabel;
+    quoteButton.disabled = isLoading;
+  };
+
+  const setCheckoutButtonLoading = (isLoading) => {
+    if (!checkoutButton) {
+      return;
+    }
+    if (!checkoutButton.dataset.defaultLabel) {
+      checkoutButton.dataset.defaultLabel = checkoutButton.textContent.trim() || 'Ir a pagar';
+    }
+    checkoutButton.classList.toggle('is-loading', isLoading);
+    checkoutButton.textContent = isLoading ? 'Redirigiendo...' : checkoutButton.dataset.defaultLabel;
+    if (isLoading) {
+      checkoutButton.disabled = true;
+    }
   };
 
   const getSelectedOption = () =>
@@ -73,7 +198,7 @@
     if (totalEl) totalEl.textContent = formatCurrency(subtotal + shipping);
 
     if (checkoutButton) {
-      checkoutButton.disabled = cart.items.length === 0 || !selectedOption;
+      checkoutButton.disabled = isCheckoutInProgress || cart.items.length === 0 || !selectedOption;
     }
   };
 
@@ -148,12 +273,14 @@
 
       const copy = document.createElement('div');
       copy.className = 'shipping-option-copy';
-      const provider = toDisplayLabel(option.provider, 'Proveedor');
-      const service = toDisplayLabel(option.service, 'Servicio');
-      const eta = option.estimated_days ? `${option.estimated_days} días` : 'Tiempo por confirmar';
+      const provider = prettifyLabel(toDisplayLabel(option.provider, 'Paquetería'));
+      const service = prettifyLabel(toDisplayLabel(option.service, ''));
+      const eta = formatEta(option);
+      const serviceText =
+        service && service.toLowerCase() !== provider.toLowerCase() ? service : 'Servicio estándar';
       copy.innerHTML = `
         <strong>${provider}</strong>
-        <span>${service}</span>
+        <span>${serviceText}</span>
         <span class="shipping-option-meta">Entrega: ${eta}</span>
       `;
 
@@ -304,6 +431,10 @@
   };
 
   const fetchShippingQuote = async () => {
+    if (isFetchingQuote) {
+      return;
+    }
+
     const cart = readCart();
     if (!cart.items.length) {
       return;
@@ -315,37 +446,44 @@
       return;
     }
 
-    if (quoteButton) {
-      quoteButton.disabled = true;
-    }
+    isFetchingQuote = true;
+    setQuoteButtonLoading(true);
     if (quoteFeedback) {
       quoteFeedback.textContent = 'Consultando opciones de envío...';
     }
 
     try {
-      const response = await fetch('/api/shipping-quote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postal_code: postalCode,
-          items: cart.items.map((item) => ({ priceId: item.priceId, quantity: item.qty })),
-        }),
-      });
-
+      let response = null;
       let data = null;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        data = null;
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        response = await fetch('/api/shipping-quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            postal_code: postalCode,
+            items: cart.items.map((item) => ({ priceId: item.priceId, quantity: item.qty })),
+          }),
+        });
+
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          data = null;
+        }
+
+        const firstAttemptNoOptions =
+          attempt === 0 && response.status === 404 && data?.debug_code === 'NO_SHIPPING_OPTIONS';
+        if (firstAttemptNoOptions) {
+          await delay(500);
+          continue;
+        }
+
+        break;
       }
 
-      if (!response.ok) {
-        const fallbackByStatus = {
-          400: 'Revisa el código postal e intenta de nuevo.',
-          404: 'No hay opciones de envío disponibles para ese código postal.',
-          502: 'No se pudo cotizar el envío en este momento. Intenta nuevamente.',
-        };
-        throw new Error(data?.error || fallbackByStatus[response.status] || 'No se pudo cotizar el envío');
+      if (!response || !response.ok) {
+        throw new Error(getFriendlyQuoteError(response?.status || 500, data));
       }
 
       shippingState.quoteId = data.quote_id;
@@ -353,6 +491,10 @@
       shippingState.options = Array.isArray(data.options) ? data.options : [];
       shippingState.postalCode = postalCode;
       shippingState.selectedOptionId = shippingState.options[0]?.option_id || null;
+
+      if (!shippingState.options.length) {
+        throw new Error('No hay opciones de envío disponibles para este código postal.');
+      }
 
       renderShippingOptions();
       updateSummary(cart);
@@ -366,13 +508,16 @@
         : error.message || 'No se pudo cotizar el envío';
       resetShippingQuote(friendlyMessage);
     } finally {
-      if (quoteButton) {
-        quoteButton.disabled = false;
-      }
+      isFetchingQuote = false;
+      setQuoteButtonLoading(false);
     }
   };
 
   const checkout = async () => {
+    if (isCheckoutInProgress) {
+      return;
+    }
+
     const cart = readCart();
     if (!cart.items.length) {
       return;
@@ -391,6 +536,9 @@
     }
 
     try {
+      isCheckoutInProgress = true;
+      setCheckoutButtonLoading(true);
+
       const response = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -405,18 +553,28 @@
         }),
       });
 
-      const data = await response.json();
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
+      }
       if (!response.ok) {
-        throw new Error(data?.error || 'Checkout error');
+        throw new Error(data?.error || 'No se pudo iniciar el pago.');
       }
-      if (data?.url) {
-        window.location.href = data.url;
+      if (!data?.url) {
+        throw new Error('No se recibió el enlace de pago. Intenta nuevamente.');
       }
+      window.location.assign(data.url);
     } catch (error) {
       if (quoteFeedback) {
         quoteFeedback.textContent = error.message || 'No se pudo iniciar el pago.';
       }
       console.error('Checkout error', error);
+    } finally {
+      isCheckoutInProgress = false;
+      setCheckoutButtonLoading(false);
+      updateSummary(readCart());
     }
   };
 

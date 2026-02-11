@@ -1270,29 +1270,54 @@ button {
 }
 
 .cart-quote-button {
-  min-width: 108px;
+  min-width: 112px;
   justify-content: center;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.cart-quote-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.cart-quote-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cart-quote-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cart-quote-button.is-loading {
+  cursor: wait;
+  opacity: 0.88;
 }
 
 .cart-shipping-options {
   display: grid;
-  gap: 10px;
-  max-height: 176px;
+  gap: 8px;
+  max-height: 188px;
   overflow-y: auto;
-  padding: 2px;
+  padding: 1px;
 }
 
 .shipping-option {
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  padding: 11px 12px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  align-items: start;
+  gap: 10px;
   background: #fff;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shipping-option:hover {
+  border-color: #bdbdbd;
+  background: #fcfcfc;
 }
 
 .shipping-option input[type="radio"] {
@@ -1301,36 +1326,37 @@ button {
 
 .shipping-option.is-selected {
   border-color: var(--color-text);
-  background: #fbfbfb;
+  background: #f7f7f7;
+  box-shadow: inset 0 0 0 1px rgba(24, 24, 24, 0.08);
 }
 
 .shipping-option-copy {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 .shipping-option-copy strong {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.2;
 }
 
 .shipping-option-copy span {
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.3;
   color: var(--color-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .shipping-option-meta {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .shipping-option-price {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text);
+  align-self: center;
 }
 
 .cart-summary-row {
@@ -1342,6 +1368,29 @@ button {
 
 .cart-summary-total {
   font-size: 17px;
+}
+
+.cart-checkout {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.cart-checkout:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.14);
+}
+
+.cart-checkout:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cart-checkout:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cart-checkout.is-loading {
+  cursor: wait;
+  opacity: 0.88;
 }
 
 .cart-note {
@@ -1404,29 +1453,54 @@ button {
 }
 
 .cart-quote-button {
-  min-width: 108px;
+  min-width: 112px;
   justify-content: center;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+}
+
+.cart-quote-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.cart-quote-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cart-quote-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.cart-quote-button.is-loading {
+  cursor: wait;
+  opacity: 0.88;
 }
 
 .cart-shipping-options {
   display: grid;
-  gap: 10px;
-  max-height: 176px;
+  gap: 8px;
+  max-height: 188px;
   overflow-y: auto;
-  padding: 2px;
+  padding: 1px;
 }
 
 .shipping-option {
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  padding: 11px 12px;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  align-items: start;
+  gap: 10px;
   background: #fff;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.shipping-option:hover {
+  border-color: #bdbdbd;
+  background: #fcfcfc;
 }
 
 .shipping-option input[type="radio"] {
@@ -1435,36 +1509,37 @@ button {
 
 .shipping-option.is-selected {
   border-color: var(--color-text);
-  background: #fbfbfb;
+  background: #f7f7f7;
+  box-shadow: inset 0 0 0 1px rgba(24, 24, 24, 0.08);
 }
 
 .shipping-option-copy {
   display: grid;
-  gap: 3px;
+  gap: 4px;
   min-width: 0;
 }
 
 .shipping-option-copy strong {
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.2;
 }
 
 .shipping-option-copy span {
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.3;
   color: var(--color-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .shipping-option-meta {
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .shipping-option-price {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--color-text);
+  align-self: center;
 }
 
 .cart-summary-total {
