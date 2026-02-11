@@ -127,12 +127,26 @@
       </div>
       <div class="cart-items" id="cart-items"></div>
       <div class="cart-summary">
+        <label class="cart-label" for="cart-postal-code">Código postal</label>
+        <div class="cart-shipping-input-row">
+          <input id="cart-postal-code" class="cart-postal-input" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="5" placeholder="Ej. 91000" />
+          <button class="button button-light cart-quote-button" id="cart-quote-button" type="button">Cotizar</button>
+        </div>
+        <p class="cart-note" id="cart-shipping-feedback">Ingresa tu código postal para cotizar envío.</p>
+        <div class="cart-shipping-options" id="cart-shipping-options"></div>
         <div class="cart-summary-row">
           <span>Subtotal</span>
           <span id="cart-subtotal">$0</span>
         </div>
+        <div class="cart-summary-row">
+          <span>Envío</span>
+          <span id="cart-shipping">Pendiente</span>
+        </div>
+        <div class="cart-summary-row cart-summary-total">
+          <span>Total</span>
+          <span id="cart-total">$0</span>
+        </div>
         <button class="button button-primary cart-checkout" id="cart-checkout" type="button">Ir a pagar</button>
-        <p class="cart-note">Envío calculado al finalizar.</p>
       </div>
     </aside>
   </div>
