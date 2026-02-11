@@ -260,15 +260,43 @@
     });
   };
 
+  const OPTION_WARNING_MESSAGES = {
+    missing_option_id_original: 'Identificador de tarifa reconstruido automáticamente.',
+    missing_provider: 'Proveedor no especificado por la paquetería.',
+    missing_service: 'Tipo de servicio no especificado por la paquetería.',
+    missing_eta: 'Tiempo estimado no proporcionado por la paquetería.',
+    insufficient_metadata_for_checkout: 'No disponible para finalizar compra.',
+  };
+
+  const OPTION_WARNING_PRIORITY = [
+    'insufficient_metadata_for_checkout',
+    'missing_eta',
+    'missing_provider',
+    'missing_service',
+    'missing_option_id_original',
+  ];
+
   const getOptionNote = (option) => {
     if (!isSelectableOption(option)) {
       return 'No disponible para finalizar compra';
     }
+
     const warnings = Array.isArray(option?.warnings) ? option.warnings : [];
-    if (option?.quality === 'fallback' && warnings.length) {
-      return 'Información parcial del proveedor';
+    if (!warnings.length) {
+      return 'Tiempo y costo sujetos a confirmación del proveedor.';
     }
-    return '';
+
+    for (const warningCode of OPTION_WARNING_PRIORITY) {
+      if (warnings.includes(warningCode) && OPTION_WARNING_MESSAGES[warningCode]) {
+        return OPTION_WARNING_MESSAGES[warningCode];
+      }
+    }
+
+    if (option?.quality === 'fallback') {
+      return 'Información parcial del proveedor.';
+    }
+
+    return 'Tiempo y costo sujetos a confirmación del proveedor.';
   };
 
   const isExpressOption = (option) => {
@@ -378,12 +406,20 @@
     etaEl.className = 'shipping-option-meta';
     etaEl.textContent = `Entrega: ${eta}`;
 
+    const hasEtaData = Boolean(
+      toDisplayLabel(option?.estimated_text || option?.estimated_delivery || option?.delivery_time || option?.transit_time, '') ||
+        Number.isFinite(parseEstimatedDays(option?.estimated_days || option?.delivery_days || option?.eta_days))
+    );
+
     const badges = [];
     if (option?.option_id && option.option_id === context.cheapestOptionId) {
       badges.push('Menor costo');
     }
     if (isExpressOption(option)) {
       badges.push('Express');
+    }
+    if (!hasEtaData) {
+      badges.push('ETA pendiente');
     }
 
     if (badges.length) {
