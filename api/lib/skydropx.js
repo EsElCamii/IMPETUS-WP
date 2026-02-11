@@ -147,8 +147,20 @@ function buildParcels(parcels, useMassUnit) {
   });
 }
 
+function buildStreet(address) {
+  return [address?.street, address?.number].filter(Boolean).join(' ').trim();
+}
+
+function getAreaLevel(address, key, fallback = 'N/A') {
+  const value = String(address?.[key] || '').trim();
+  if (value) {
+    return value;
+  }
+  return fallback;
+}
+
 function buildAddressFromOrigin(origin) {
-  const street = [origin?.street, origin?.number].filter(Boolean).join(' ').trim();
+  const street = buildStreet(origin);
   return sanitizeObject({
     name: origin?.name || 'IMPETUS',
     company: origin?.company || 'IMPETUS',
@@ -165,6 +177,7 @@ function buildAddressFromOrigin(origin) {
 }
 
 function buildAddressToDestination(destination) {
+  const street = buildStreet(destination);
   return sanitizeObject({
     name: destination?.name || 'Cliente IMPETUS',
     company: destination?.company || undefined,
@@ -175,8 +188,27 @@ function buildAddressToDestination(destination) {
     province: destination?.state,
     city: destination?.city,
     neighborhood: destination?.colony,
-    address1: destination?.street || undefined,
+    address1: street || undefined,
     reference: destination?.reference,
+  });
+}
+
+function buildAddressV1(address, isDestination = false) {
+  const street = buildStreet(address);
+  const defaultReference = isDestination ? 'Cotizacion web' : 'Origen IMPETUS';
+
+  return sanitizeObject({
+    country_code: address?.country_code || address?.country || 'MX',
+    postal_code: address?.postal_code || address?.zip || undefined,
+    area_level1: getAreaLevel(address, 'state'),
+    area_level2: getAreaLevel(address, 'city'),
+    area_level3: getAreaLevel(address, 'colony'),
+    company: address?.company || (isDestination ? 'Cliente' : 'IMPETUS'),
+    name: address?.name || (isDestination ? 'Cliente IMPETUS' : 'IMPETUS'),
+    phone: address?.phone || '5511111111',
+    email: address?.email || undefined,
+    street1: street || 'N/A',
+    reference: address?.reference || address?.colony || defaultReference,
   });
 }
 
@@ -187,8 +219,34 @@ function buildQuotePayloadCandidates(payload) {
   const parcelsWithMassUnit = buildParcels(payload?.parcels, true);
   const addressFrom = buildAddressFromOrigin(origin);
   const addressTo = buildAddressToDestination(destination);
+  const addressFromV1 = buildAddressV1(origin, false);
+  const addressToV1 = buildAddressV1(destination, true);
 
   return [
+    sanitizeObject({
+      quotation: {
+        address_from: addressFromV1,
+        address_to: addressToV1,
+        parcels: parcelsWithMassUnit,
+      },
+    }),
+    sanitizeObject({
+      quotation: {
+        address_from: addressFromV1,
+        address_to: addressToV1,
+        parcels: parcelsWithWeightUnit,
+      },
+    }),
+    sanitizeObject({
+      address_from: addressFromV1,
+      address_to: addressToV1,
+      parcels: parcelsWithMassUnit,
+    }),
+    sanitizeObject({
+      address_from: addressFromV1,
+      address_to: addressToV1,
+      parcels: parcelsWithWeightUnit,
+    }),
     sanitizeObject(payload),
     sanitizeObject({
       origin,
