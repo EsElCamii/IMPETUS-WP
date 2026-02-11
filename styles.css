@@ -1221,6 +1221,76 @@ button {
   align-items: end;
 }
 
+.cart-label {
+  font-size: 13px;
+  color: var(--color-muted);
+}
+
+.cart-shipping-input-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.cart-postal-input {
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.cart-postal-input:focus {
+  outline: 2px solid rgba(54, 100, 43, 0.25);
+  outline-offset: 1px;
+}
+
+.cart-quote-button {
+  min-width: 108px;
+  justify-content: center;
+}
+
+.cart-shipping-options {
+  display: grid;
+  gap: 8px;
+  max-height: 164px;
+  overflow-y: auto;
+}
+
+.shipping-option {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.shipping-option-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.shipping-option-copy strong {
+  font-size: 13px;
+}
+
+.shipping-option-copy span {
+  font-size: 12px;
+  color: var(--color-muted);
+}
+
+.shipping-option-price {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cart-summary-total {
+  font-size: 17px;
+}
+
 .catalog-copy h1 {
   font-size: 56px;
   font-weight: 700;
