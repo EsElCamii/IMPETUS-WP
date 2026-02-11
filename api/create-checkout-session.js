@@ -1,75 +1,104 @@
-const Stripe = require("stripe");
+const Stripe = require('stripe');
+const { validateCheckoutPayload } = require('./lib/validation');
+const { getQuoteSnapshot } = require('./lib/validation');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2023-10-16",
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: '2023-10-16',
 });
 
-const ALLOWED_PRICES = new Set([
-  "price_1SxGX6CtADenWoLmOjLKR53u",
-  "price_catuai_500g",
-  "price_catuai_1kg",
-  "price_zongolica_250g",
-  "price_zongolica_500g",
-  "price_zongolica_1kg",
-  "price_cosautlan_250g",
-  "price_cosautlan_500g",
-  "price_cosautlan_1kg",
-  "price_corahe_250g",
-  "price_corahe_500g",
-  "price_corahe_1kg",
-]);
+function canonicalItems(items) {
+  return items
+    .map((item) => `${item.priceId}:${item.quantity}`)
+    .sort()
+    .join('|');
+}
 
 module.exports = async function handler(req, res) {
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method not allowed' });
     return;
   }
 
   try {
-    const { items } = req.body || {};
-    if (!Array.isArray(items) || items.length === 0) {
-      res.status(400).json({ error: "No items provided" });
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('Stripe is not configured');
+    }
+
+    const { items, quoteId, optionId } = validateCheckoutPayload(req.body || {});
+    const snapshot = getQuoteSnapshot(quoteId) || getQuoteSnapshot(req.body?.quote_token);
+
+    if (!snapshot) {
+      res.status(400).json({ error: 'Shipping quote expired or invalid. Request a new quote.' });
       return;
     }
 
-    const lineItems = items.map((item) => {
-      const priceId = item?.priceId;
-      const quantity = Number(item?.quantity || 1);
+    const matchesSnapshot = canonicalItems(items) === canonicalItems(snapshot.items || []);
+    if (!matchesSnapshot) {
+      res.status(400).json({ error: 'Cart items do not match the quoted shipment.' });
+      return;
+    }
 
-      if (!ALLOWED_PRICES.has(priceId)) {
-        throw new Error("Invalid price id");
-      }
+    const shippingOption = (snapshot.options || []).find((opt) => opt.option_id === optionId);
+    if (!shippingOption) {
+      res.status(400).json({ error: 'Selected shipping option is invalid for this quote.' });
+      return;
+    }
 
-      return {
-        price: priceId,
-        quantity: Math.max(1, Math.min(quantity, 99)),
-      };
-    });
-
-    const metadataItems = items.map((item) => ({
-      productId: item.productId || null,
-      name: item.name || null,
-      size: item.size || null,
-      grind: item.grind || null,
-      qty: Number(item.quantity || 1),
-      priceId: item.priceId || null,
+    const productLineItems = items.map((item) => ({
+      price: item.priceId,
+      quantity: item.quantity,
     }));
 
+    const shippingAmountCents = Math.round(Number(shippingOption.price_mxn) * 100);
+    if (!Number.isInteger(shippingAmountCents) || shippingAmountCents < 0) {
+      throw new Error('Invalid shipping amount');
+    }
+
+    const lineItems = [
+      ...productLineItems,
+      {
+        price_data: {
+          currency: 'mxn',
+          product_data: {
+            name: `Envío ${shippingOption.provider} - ${shippingOption.service}`,
+          },
+          unit_amount: shippingAmountCents,
+        },
+        quantity: 1,
+      },
+    ];
+
     const metadata = {
-      items: JSON.stringify(metadataItems).slice(0, 500),
+      quote_id: String(snapshot.quote_id || quoteId).slice(0, 500),
+      quotation_id: String(shippingOption.quotation_id).slice(0, 500),
+      shipping_provider: String(shippingOption.provider).slice(0, 500),
+      shipping_service: String(shippingOption.service).slice(0, 500),
+      shipping_price: String(shippingOption.price_mxn),
+      destination_postal_code: String(snapshot.postal_code || '').slice(0, 500),
+      items: JSON.stringify(items).slice(0, 500),
     };
 
+    const publicBaseUrl = process.env.PUBLIC_BASE_URL;
+    if (!publicBaseUrl) {
+      throw new Error('PUBLIC_BASE_URL is required');
+    }
+
     const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      payment_method_types: ["card"],
+      mode: 'payment',
+      payment_method_types: ['card'],
       line_items: lineItems,
+      shipping_address_collection: {
+        allowed_countries: ['MX'],
+      },
       metadata,
-      success_url: `${process.env.PUBLIC_BASE_URL}/success.html`,
-      cancel_url: `${process.env.PUBLIC_BASE_URL}/cancel.html`,
+      success_url: `${publicBaseUrl}/success.html`,
+      cancel_url: `${publicBaseUrl}/cancel.html`,
     });
 
     res.status(200).json({ url: session.url });
   } catch (error) {
-    res.status(500).json({ error: error.message || "Checkout error" });
+    const statusCode = error.statusCode || 500;
+    const message = statusCode === 500 ? 'Checkout session could not be created' : error.message;
+    res.status(statusCode).json({ error: message });
   }
 };
