@@ -2,19 +2,45 @@ const { calculateOrderWeightGrams } = require('./lib/catalog');
 const { createShippingQuote } = require('./lib/skydropx');
 const { validateItems, validatePostalCode, storeQuoteSnapshot, createValidationError, QUOTE_TTL_MS } = require('./lib/validation');
 
-const ORIGIN = {
-  name: 'IMPETUS',
-  company: 'IMPETUS',
-  phone: '0000000000',
-  email: 'ventas@impetus.mx',
-  country_code: 'MX',
-  postal_code: '91000',
-  state: 'Veracruz',
-  city: 'Xalapa',
-  colony: 'Centro',
-  street: 'Av. Principal',
-  number: '1',
-};
+const REQUIRED_ORIGIN_ENV_KEYS = [
+  'SKYDROPX_ORIGIN_NAME',
+  'SKYDROPX_ORIGIN_COMPANY',
+  'SKYDROPX_ORIGIN_PHONE',
+  'SKYDROPX_ORIGIN_EMAIL',
+  'SKYDROPX_ORIGIN_COUNTRY_CODE',
+  'SKYDROPX_ORIGIN_POSTAL_CODE',
+  'SKYDROPX_ORIGIN_STATE',
+  'SKYDROPX_ORIGIN_CITY',
+  'SKYDROPX_ORIGIN_COLONY',
+  'SKYDROPX_ORIGIN_STREET',
+  'SKYDROPX_ORIGIN_NUMBER',
+];
+
+function getRequiredEnvVar(key) {
+  const value = typeof process.env[key] === 'string' ? process.env[key].trim() : '';
+  return value;
+}
+
+function getOriginFromEnv() {
+  const missing = REQUIRED_ORIGIN_ENV_KEYS.filter((key) => !getRequiredEnvVar(key));
+  if (missing.length > 0) {
+    throw new Error(`Skydropx origin config missing required env vars: ${missing.join(', ')}`);
+  }
+
+  return {
+    name: getRequiredEnvVar('SKYDROPX_ORIGIN_NAME'),
+    company: getRequiredEnvVar('SKYDROPX_ORIGIN_COMPANY'),
+    phone: getRequiredEnvVar('SKYDROPX_ORIGIN_PHONE'),
+    email: getRequiredEnvVar('SKYDROPX_ORIGIN_EMAIL'),
+    country_code: getRequiredEnvVar('SKYDROPX_ORIGIN_COUNTRY_CODE'),
+    postal_code: getRequiredEnvVar('SKYDROPX_ORIGIN_POSTAL_CODE'),
+    state: getRequiredEnvVar('SKYDROPX_ORIGIN_STATE'),
+    city: getRequiredEnvVar('SKYDROPX_ORIGIN_CITY'),
+    colony: getRequiredEnvVar('SKYDROPX_ORIGIN_COLONY'),
+    street: getRequiredEnvVar('SKYDROPX_ORIGIN_STREET'),
+    number: getRequiredEnvVar('SKYDROPX_ORIGIN_NUMBER'),
+  };
+}
 
 function normalizeShippingQuoteError(error) {
   const base = {
@@ -34,6 +60,10 @@ function normalizeShippingQuoteError(error) {
   }
 
   if (message.includes('Skydropx credentials are not configured')) {
+    return { ...base, debug_code: 'SKYDROPX_CONFIG_MISSING' };
+  }
+
+  if (message.includes('Skydropx origin config missing')) {
     return { ...base, debug_code: 'SKYDROPX_CONFIG_MISSING' };
   }
 
@@ -61,6 +91,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
+    const origin = getOriginFromEnv();
     const postalCode = validatePostalCode(req.body?.postal_code);
     const items = validateItems(req.body?.items);
     const totalWeight = calculateOrderWeightGrams(items);
@@ -70,7 +101,7 @@ module.exports = async function handler(req, res) {
     }
 
     const quotationPayload = {
-      origin: ORIGIN,
+      origin,
       destination: {
         country_code: 'MX',
         postal_code: postalCode,
@@ -112,11 +143,20 @@ module.exports = async function handler(req, res) {
     });
   } catch (error) {
     const normalized = normalizeShippingQuoteError(error);
+    const requestPayloadPreview = {
+      destination_postal_code: req.body?.postal_code || null,
+      items_count: Array.isArray(req.body?.items) ? req.body.items.length : 0,
+    };
 
     console.error('[shipping_quote_error]', {
       debug_code: normalized.debug_code,
       status_code: normalized.statusCode,
       message: error?.message || 'Unknown shipping quote error',
+      skydropx_status_code: error?.statusCode || null,
+      skydropx_url: error?.requestUrl || null,
+      skydropx_response: error?.responseBody || null,
+      skydropx_attempts: error?.attempts || null,
+      request_payload: requestPayloadPreview,
     });
 
     res.status(normalized.statusCode).json({

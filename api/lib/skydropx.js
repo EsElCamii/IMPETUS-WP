@@ -98,10 +98,127 @@ async function skydropxRequest(path, payload, attempt = 0) {
   const json = await safeReadJson(response);
 
   if (!response.ok) {
-    throw new Error(`Skydropx request failed (${response.status}) at ${requestUrl}: ${JSON.stringify(json)}`);
+    const error = new Error(`Skydropx request failed (${response.status}) at ${requestUrl}: ${JSON.stringify(json)}`);
+    error.statusCode = response.status;
+    error.requestUrl = requestUrl;
+    error.responseBody = json;
+    error.requestPayload = payload;
+    throw error;
   }
 
   return json;
+}
+
+function sanitizeObject(value) {
+  if (Array.isArray(value)) {
+    return value.map(sanitizeObject);
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const result = {};
+  for (const [key, val] of Object.entries(value)) {
+    if (val === undefined || val === null || val === '') {
+      continue;
+    }
+    result[key] = sanitizeObject(val);
+  }
+  return result;
+}
+
+function buildParcels(parcels, useMassUnit) {
+  return (Array.isArray(parcels) ? parcels : []).map((parcel) => {
+    const weight = Number(parcel?.weight || 0);
+    const length = Number(parcel?.length || 0);
+    const width = Number(parcel?.width || 0);
+    const height = Number(parcel?.height || 0);
+    const distanceUnit = String(parcel?.distance_unit || parcel?.distanceUnit || 'cm');
+    const weightUnit = String(parcel?.weight_unit || parcel?.weightUnit || parcel?.mass_unit || 'kg');
+
+    return sanitizeObject({
+      weight,
+      length,
+      width,
+      height,
+      distance_unit: useMassUnit ? distanceUnit.toUpperCase() : distanceUnit.toLowerCase(),
+      weight_unit: useMassUnit ? undefined : weightUnit.toLowerCase(),
+      mass_unit: useMassUnit ? weightUnit.toUpperCase() : undefined,
+    });
+  });
+}
+
+function buildAddressFromOrigin(origin) {
+  const street = [origin?.street, origin?.number].filter(Boolean).join(' ').trim();
+  return sanitizeObject({
+    name: origin?.name || 'IMPETUS',
+    company: origin?.company || 'IMPETUS',
+    phone: origin?.phone || '5511111111',
+    email: origin?.email || undefined,
+    zip: origin?.postal_code,
+    country: origin?.country_code || origin?.country || 'MX',
+    province: origin?.state,
+    city: origin?.city,
+    neighborhood: origin?.colony,
+    address1: street || undefined,
+    reference: origin?.colony,
+  });
+}
+
+function buildAddressToDestination(destination) {
+  return sanitizeObject({
+    name: destination?.name || 'Cliente IMPETUS',
+    company: destination?.company || undefined,
+    phone: destination?.phone || '5511111111',
+    email: destination?.email || undefined,
+    zip: destination?.postal_code,
+    country: destination?.country_code || destination?.country || 'MX',
+    province: destination?.state,
+    city: destination?.city,
+    neighborhood: destination?.colony,
+    address1: destination?.street || undefined,
+    reference: destination?.reference,
+  });
+}
+
+function buildQuotePayloadCandidates(payload) {
+  const origin = payload?.origin || {};
+  const destination = payload?.destination || {};
+  const parcelsWithWeightUnit = buildParcels(payload?.parcels, false);
+  const parcelsWithMassUnit = buildParcels(payload?.parcels, true);
+  const addressFrom = buildAddressFromOrigin(origin);
+  const addressTo = buildAddressToDestination(destination);
+
+  return [
+    sanitizeObject(payload),
+    sanitizeObject({
+      origin,
+      destination,
+      parcels: parcelsWithMassUnit,
+    }),
+    sanitizeObject({
+      address_from: addressFrom,
+      address_to: addressTo,
+      parcels: parcelsWithMassUnit,
+    }),
+    sanitizeObject({
+      shipment: {
+        address_from: addressFrom,
+        address_to: addressTo,
+        parcels: parcelsWithMassUnit,
+      },
+    }),
+    sanitizeObject({
+      address_from: {
+        zip: addressFrom.zip,
+        country: addressFrom.country,
+      },
+      address_to: {
+        zip: addressTo.zip,
+        country: addressTo.country,
+      },
+      parcels: parcelsWithWeightUnit,
+    }),
+  ];
 }
 
 function normalizeQuotationsResponse(responseBody) {
@@ -140,8 +257,34 @@ function normalizeQuotationsResponse(responseBody) {
 }
 
 async function createShippingQuote(payload) {
-  const result = await skydropxRequest('/api/v1/quotations', payload);
-  return normalizeQuotationsResponse(result);
+  const candidates = buildQuotePayloadCandidates(payload);
+  let lastError = null;
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    const candidate = candidates[i];
+    try {
+      const result = await skydropxRequest('/api/v1/quotations', candidate);
+      return normalizeQuotationsResponse(result);
+    } catch (error) {
+      const statusCode = Number(error?.statusCode || 0);
+      const isRetryableInvalidPayload = statusCode === 400 && i < candidates.length - 1;
+      if (isRetryableInvalidPayload) {
+        lastError = error;
+        continue;
+      }
+      if (statusCode === 400) {
+        error.attempts = candidates.length;
+      }
+      throw error;
+    }
+  }
+
+  if (lastError) {
+    lastError.attempts = candidates.length;
+    throw lastError;
+  }
+
+  throw new Error('Skydropx quotation failed with no payload candidates to try');
 }
 
 async function createShipment(payload) {
