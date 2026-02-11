@@ -1,4 +1,18 @@
-const SKYDROPX_API_BASE = (process.env.SKYDROPX_API_BASE || 'https://api.skydropx.com').replace(/\/$/, '');
+function normalizeApiBase(rawBase) {
+  let base = String(rawBase || 'https://pro.skydropx.com').trim().replace(/\/$/, '');
+
+  // Accept host-only base URL even if env was copied with /api/v1 suffix.
+  base = base.replace(/\/api\/v1$/i, '');
+
+  // Backward-compatible fix for legacy host values.
+  if (/^https?:\/\/api\.skydropx\.com$/i.test(base)) {
+    return 'https://pro.skydropx.com';
+  }
+
+  return base;
+}
+
+const SKYDROPX_API_BASE = normalizeApiBase(process.env.SKYDROPX_API_BASE);
 
 const tokenCache = {
   accessToken: null,
@@ -17,7 +31,8 @@ async function requestToken() {
     throw new Error('Skydropx credentials are not configured');
   }
 
-  const response = await fetch(`${SKYDROPX_API_BASE}/api/v1/oauth/token`, {
+  const tokenUrl = `${SKYDROPX_API_BASE}/api/v1/oauth/token`;
+  const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -29,7 +44,7 @@ async function requestToken() {
 
   if (!response.ok) {
     const body = await safeReadJson(response);
-    throw new Error(`Skydropx auth failed (${response.status}): ${JSON.stringify(body)}`);
+    throw new Error(`Skydropx auth failed (${response.status}) at ${tokenUrl}: ${JSON.stringify(body)}`);
   }
 
   const payload = await response.json();
@@ -53,8 +68,9 @@ async function getSkydropxToken(forceRefresh = false) {
 
 async function skydropxRequest(path, payload, attempt = 0) {
   const token = await getSkydropxToken(attempt > 0);
+  const requestUrl = `${SKYDROPX_API_BASE}${path}`;
 
-  const response = await fetch(`${SKYDROPX_API_BASE}${path}`, {
+  const response = await fetch(requestUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -70,7 +86,7 @@ async function skydropxRequest(path, payload, attempt = 0) {
   const json = await safeReadJson(response);
 
   if (!response.ok) {
-    throw new Error(`Skydropx request failed (${response.status}): ${JSON.stringify(json)}`);
+    throw new Error(`Skydropx request failed (${response.status}) at ${requestUrl}: ${JSON.stringify(json)}`);
   }
 
   return json;
@@ -122,9 +138,17 @@ async function createShipment(payload) {
 
 async function safeReadJson(response) {
   try {
-    return await response.json();
+    const text = await response.text();
+    if (!text) {
+      return { message: 'Empty response body' };
+    }
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      return { message: text.slice(0, 1000) };
+    }
   } catch (error) {
-    return { message: 'No JSON body returned' };
+    return { message: 'Failed to read response body' };
   }
 }
 
