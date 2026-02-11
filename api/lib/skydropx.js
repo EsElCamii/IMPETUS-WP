@@ -675,32 +675,68 @@ async function createShippingQuote(payload) {
   return details.options;
 }
 
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function shouldRetryEmptyQuoteResponse(responseBody, normalized) {
+  const statusText = String(responseBody?.status || responseBody?.quotation_scope?.status || '').toLowerCase();
+  const pendingFlags =
+    responseBody?.is_completed === false ||
+    responseBody?.quotation_scope?.is_completed === false ||
+    statusText === 'pending' ||
+    statusText === 'processing';
+  const hasQuoteId = Boolean(
+    responseBody?.id ||
+      responseBody?.quotation_id ||
+      responseBody?.quote_id ||
+      responseBody?.quotation_scope?.id
+  );
+  const hasQuoteContainers = Boolean(
+    responseBody &&
+      typeof responseBody === 'object' &&
+      ('rates' in responseBody || 'packages' in responseBody || 'quotation_scope' in responseBody)
+  );
+  const hasRawEntries = Number(normalized?.source_count || 0) > 0;
+
+  return pendingFlags || (hasQuoteId && hasQuoteContainers) || hasRawEntries;
+}
+
 async function createShippingQuoteDetailed(payload) {
   const candidates = buildQuotePayloadCandidates(payload);
   let lastError = null;
   let lastEmptyResult = null;
+  const EMPTY_RESPONSE_RETRY_DELAYS_MS = [650, 1100];
 
   for (let i = 0; i < candidates.length; i += 1) {
     const candidate = candidates[i];
     try {
-      const result = await skydropxRequest('/api/v1/quotations', candidate);
-      const normalized = normalizeQuotationsResponse(result);
-      const options = normalized.options;
-      const quoteDetails = {
-        options,
-        strict_count: normalized.strictOptions.length,
-        fallback_count: normalized.fallbackOptions.length,
-        source_count: normalized.source_count,
-        normalized_count: options.length,
-        candidate_index: i,
-        raw_response: result,
-      };
+      for (let emptyAttempt = 0; emptyAttempt <= EMPTY_RESPONSE_RETRY_DELAYS_MS.length; emptyAttempt += 1) {
+        const result = await skydropxRequest('/api/v1/quotations', candidate);
+        const normalized = normalizeQuotationsResponse(result);
+        const options = normalized.options;
+        const quoteDetails = {
+          options,
+          strict_count: normalized.strictOptions.length,
+          fallback_count: normalized.fallbackOptions.length,
+          source_count: normalized.source_count,
+          normalized_count: options.length,
+          candidate_index: i,
+          raw_response: result,
+        };
 
-      if (options.length > 0) {
-        return quoteDetails;
+        if (options.length > 0) {
+          return quoteDetails;
+        }
+
+        lastEmptyResult = quoteDetails;
+        const isLastEmptyAttempt = emptyAttempt >= EMPTY_RESPONSE_RETRY_DELAYS_MS.length;
+        if (isLastEmptyAttempt || !shouldRetryEmptyQuoteResponse(result, normalized)) {
+          break;
+        }
+
+        await delay(EMPTY_RESPONSE_RETRY_DELAYS_MS[emptyAttempt]);
       }
-
-      lastEmptyResult = quoteDetails;
       continue;
     } catch (error) {
       const statusCode = Number(error?.statusCode || 0);
