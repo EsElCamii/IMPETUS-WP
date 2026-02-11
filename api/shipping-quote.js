@@ -141,7 +141,14 @@ module.exports = async function handler(req, res) {
     const options = await createShippingQuote(quotationPayload);
 
     if (!options.length) {
-      res.status(404).json({ error: 'No shipping options available for this destination' });
+      console.warn('[shipping_quote_no_options]', {
+        destination_postal_code: postalCode,
+        total_weight_grams: totalWeight,
+      });
+      res.status(404).json({
+        error: 'No hay opciones de envío disponibles para este código postal.',
+        debug_code: 'NO_SHIPPING_OPTIONS',
+      });
       return;
     }
 

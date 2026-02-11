@@ -308,9 +308,20 @@
         }),
       });
 
-      const data = await response.json();
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
+      }
+
       if (!response.ok) {
-        throw new Error(data?.error || 'No se pudo cotizar el envío');
+        const fallbackByStatus = {
+          400: 'Revisa el código postal e intenta de nuevo.',
+          404: 'No hay opciones de envío disponibles para ese código postal.',
+          502: 'No se pudo cotizar el envío en este momento. Intenta nuevamente.',
+        };
+        throw new Error(data?.error || fallbackByStatus[response.status] || 'No se pudo cotizar el envío');
       }
 
       shippingState.quoteId = data.quote_id;
@@ -325,7 +336,11 @@
         quoteFeedback.textContent = 'Selecciona una opción de envío para continuar.';
       }
     } catch (error) {
-      resetShippingQuote(error.message || 'No se pudo cotizar el envío');
+      const isNetworkError = error?.name === 'TypeError' && /fetch/i.test(String(error?.message || ''));
+      const friendlyMessage = isNetworkError
+        ? 'No se pudo conectar para cotizar envío. Intenta nuevamente.'
+        : error.message || 'No se pudo cotizar el envío';
+      resetShippingQuote(friendlyMessage);
     } finally {
       if (quoteButton) {
         quoteButton.disabled = false;

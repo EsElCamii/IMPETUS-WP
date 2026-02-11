@@ -280,24 +280,54 @@ function buildQuotePayloadCandidates(payload) {
 }
 
 function normalizeQuotationsResponse(responseBody) {
-  const source = Array.isArray(responseBody)
-    ? responseBody
-    : Array.isArray(responseBody?.data)
-      ? responseBody.data
-      : Array.isArray(responseBody?.quotations)
-        ? responseBody.quotations
-        : [];
+  const source = extractQuotationEntries(responseBody);
 
   return source
     .map((entry) => {
-      const optionId = String(entry.id || entry.option_id || '').trim();
-      const provider = String(entry.provider?.name || entry.provider || '').trim();
-      const service = String(entry.service_level_name || entry.service || entry.name || '').trim();
-      const amount = Number(entry.total_pricing || entry.total_price || entry.price || entry.amount || 0);
-      const quotationId = String(entry.quotation_id || entry.id || '').trim();
-      const estimatedDays = Number(entry.estimated_delivery_days || entry.estimated_days || entry.delivery_days || 0) || null;
+      const value = flattenQuotationEntry(entry);
+      const optionId = String(
+        value.option_id ||
+        value.id ||
+        value.quote_id ||
+        value.quotation_id ||
+        value.service_code ||
+        ''
+      ).trim();
+      const provider = String(
+        value.provider?.name ||
+        value.provider?.display_name ||
+        value.provider?.title ||
+        value.provider_name ||
+        value.provider ||
+        'Proveedor'
+      ).trim();
+      const service = String(
+        value.service_level_name ||
+        value.service_level?.name ||
+        value.service?.name ||
+        value.service_name ||
+        value.service ||
+        value.name ||
+        'Servicio estándar'
+      ).trim();
+      const amount = Number(
+        value.total_pricing ||
+        value.total_price ||
+        value.total ||
+        value.price ||
+        value.amount ||
+        0
+      );
+      const quotationId = String(value.quotation_id || value.quote_id || value.id || optionId || '').trim();
+      const estimatedDays = Number(
+        value.estimated_delivery_days ||
+        value.estimated_days ||
+        value.delivery_days ||
+        value.transit_days ||
+        0
+      ) || null;
 
-      if (!optionId || !quotationId || !provider || !service || !Number.isFinite(amount) || amount <= 0) {
+      if (!optionId || !quotationId || !Number.isFinite(amount) || amount <= 0) {
         return null;
       }
 
@@ -312,6 +342,45 @@ function normalizeQuotationsResponse(responseBody) {
     })
     .filter(Boolean)
     .sort((a, b) => a.price_mxn - b.price_mxn);
+}
+
+function extractQuotationEntries(responseBody) {
+  if (Array.isArray(responseBody)) {
+    return responseBody;
+  }
+
+  const candidates = [
+    responseBody?.data,
+    responseBody?.quotations,
+    responseBody?.results,
+    responseBody?.items,
+    responseBody?.data?.quotations,
+    responseBody?.data?.results,
+    responseBody?.quotation,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return [];
+}
+
+function flattenQuotationEntry(entry) {
+  if (!entry || typeof entry !== 'object') {
+    return {};
+  }
+
+  const nested = entry.attributes && typeof entry.attributes === 'object' ? entry.attributes : {};
+  const quotationNested = entry.quotation && typeof entry.quotation === 'object' ? entry.quotation : {};
+
+  return {
+    ...entry,
+    ...nested,
+    ...quotationNested,
+  };
 }
 
 async function createShippingQuote(payload) {
