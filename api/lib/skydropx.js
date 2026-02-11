@@ -290,7 +290,9 @@ function normalizeQuotationsResponse(responseBody) {
         value.id ||
         value.quote_id ||
         value.quotation_id ||
+        value.rate_id ||
         value.service_code ||
+        value.__rate_key ||
         ''
       ).trim();
       const provider = String(
@@ -298,6 +300,10 @@ function normalizeQuotationsResponse(responseBody) {
         value.provider?.display_name ||
         value.provider?.title ||
         value.provider_name ||
+        value.carrier ||
+        value.courier ||
+        value.company ||
+        value.__rate_key ||
         value.provider ||
         'Proveedor'
       ).trim();
@@ -305,17 +311,29 @@ function normalizeQuotationsResponse(responseBody) {
         value.service_level_name ||
         value.service_level?.name ||
         value.service?.name ||
+        value.delivery_type ||
+        value.product ||
         value.service_name ||
         value.service ||
         value.name ||
         'Servicio estándar'
       ).trim();
-      const amount = Number(
+      const amount = pickFiniteNumber(
         value.total_pricing ||
         value.total_price ||
         value.total ||
+        value.total_cost ||
+        value.total_amount ||
+        value.final_price ||
+        value.rate ||
+        value.cost ||
         value.price ||
         value.amount ||
+        value.pricing?.total ||
+        value.pricing?.price ||
+        value.pricing?.amount ||
+        value.pricing?.final_price ||
+        value.cost_breakdown?.total ||
         0
       );
       const quotationId = String(value.quotation_id || value.quote_id || value.id || optionId || '').trim();
@@ -323,6 +341,9 @@ function normalizeQuotationsResponse(responseBody) {
         value.estimated_delivery_days ||
         value.estimated_days ||
         value.delivery_days ||
+        value.delivery_time_days ||
+        value.eta_days ||
+        value.transit_time ||
         value.transit_days ||
         0
       ) || null;
@@ -354,15 +375,72 @@ function extractQuotationEntries(responseBody) {
     responseBody?.quotations,
     responseBody?.results,
     responseBody?.items,
+    responseBody?.rates,
+    responseBody?.quotation_scope?.rates,
+    responseBody?.data?.rates,
     responseBody?.data?.quotations,
     responseBody?.data?.results,
     responseBody?.quotation,
   ];
 
   for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
+    const entries = toEntryArray(candidate);
+    if (entries.length > 0) {
+      return entries;
     }
+  }
+
+  return [];
+}
+
+function toEntryArray(candidate) {
+  if (!candidate) {
+    return [];
+  }
+
+  if (Array.isArray(candidate)) {
+    return candidate;
+  }
+
+  if (typeof candidate === 'object') {
+    const entries = [];
+    for (const [key, value] of Object.entries(candidate)) {
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (item && typeof item === 'object') {
+            entries.push({ ...item, __rate_key: key });
+          }
+        });
+        continue;
+      }
+      if (value && typeof value === 'object') {
+        entries.push({ ...value, __rate_key: key });
+      }
+    }
+    if (entries.length > 0) {
+      return entries;
+    }
+
+    const isEntryLike = [
+      'option_id',
+      'id',
+      'quotation_id',
+      'quote_id',
+      'price',
+      'total_price',
+      'total_pricing',
+      'amount',
+      'provider',
+      'service',
+      'service_level_name',
+      'name',
+    ].some((key) => key in candidate);
+
+    if (isEntryLike) {
+      return [candidate];
+    }
+
+    return entries;
   }
 
   return [];
@@ -375,12 +453,28 @@ function flattenQuotationEntry(entry) {
 
   const nested = entry.attributes && typeof entry.attributes === 'object' ? entry.attributes : {};
   const quotationNested = entry.quotation && typeof entry.quotation === 'object' ? entry.quotation : {};
+  const pricingNested = entry.pricing && typeof entry.pricing === 'object' ? entry.pricing : {};
+  const serviceNested = entry.service && typeof entry.service === 'object' ? entry.service : {};
+  const providerNested = entry.provider && typeof entry.provider === 'object' ? entry.provider : {};
 
   return {
     ...entry,
     ...nested,
     ...quotationNested,
+    pricing: pricingNested,
+    service: serviceNested,
+    provider: entry.provider,
+    provider_name: entry.provider_name || providerNested.name || providerNested.display_name || undefined,
+    service_name: entry.service_name || serviceNested.name || serviceNested.service_level_name || undefined,
   };
+}
+
+function pickFiniteNumber(value) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return 0;
+  }
+  return num;
 }
 
 async function createShippingQuote(payload) {

@@ -125,6 +125,12 @@ function summarizeSkydropxResponse(response) {
     data_length: Array.isArray(response.data) ? response.data.length : null,
     quotations_length: Array.isArray(response.quotations) ? response.quotations.length : null,
     results_length: Array.isArray(response.results) ? response.results.length : null,
+    rates_type: Array.isArray(response.rates) ? 'array' : typeof response.rates,
+    rates_length: Array.isArray(response.rates)
+      ? response.rates.length
+      : response.rates && typeof response.rates === 'object'
+        ? Object.keys(response.rates).length
+        : null,
   };
 }
 
