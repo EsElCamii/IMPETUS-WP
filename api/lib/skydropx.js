@@ -384,6 +384,11 @@ function flattenQuotationEntry(entry) {
 }
 
 async function createShippingQuote(payload) {
+  const details = await createShippingQuoteDetailed(payload);
+  return details.options;
+}
+
+async function createShippingQuoteDetailed(payload) {
   const candidates = buildQuotePayloadCandidates(payload);
   let lastError = null;
 
@@ -391,7 +396,16 @@ async function createShippingQuote(payload) {
     const candidate = candidates[i];
     try {
       const result = await skydropxRequest('/api/v1/quotations', candidate);
-      return normalizeQuotationsResponse(result);
+      const source = extractQuotationEntries(result);
+      const options = normalizeQuotationsResponse(result);
+
+      return {
+        options,
+        source_count: source.length,
+        normalized_count: options.length,
+        candidate_index: i,
+        raw_response: result,
+      };
     } catch (error) {
       const statusCode = Number(error?.statusCode || 0);
       const isRetryableInvalidPayload = statusCode === 400 && i < candidates.length - 1;
@@ -437,5 +451,6 @@ async function safeReadJson(response) {
 module.exports = {
   getSkydropxToken,
   createShippingQuote,
+  createShippingQuoteDetailed,
   createShipment,
 };

@@ -1,5 +1,5 @@
 const { calculateOrderWeightGrams } = require('./lib/catalog');
-const { createShippingQuote } = require('./lib/skydropx');
+const { createShippingQuoteDetailed } = require('./lib/skydropx');
 const { validateItems, validatePostalCode, storeQuoteSnapshot, createValidationError, QUOTE_TTL_MS } = require('./lib/validation');
 
 const REQUIRED_ORIGIN_ENV_KEYS = [
@@ -104,6 +104,30 @@ const DEFAULT_PARCEL = {
   height_cm: 12,
 };
 
+function summarizeSkydropxResponse(response) {
+  if (Array.isArray(response)) {
+    return {
+      type: 'array',
+      length: response.length,
+    };
+  }
+
+  if (!response || typeof response !== 'object') {
+    return {
+      type: typeof response,
+      value: response,
+    };
+  }
+
+  return {
+    type: 'object',
+    top_level_keys: Object.keys(response).slice(0, 20),
+    data_length: Array.isArray(response.data) ? response.data.length : null,
+    quotations_length: Array.isArray(response.quotations) ? response.quotations.length : null,
+    results_length: Array.isArray(response.results) ? response.results.length : null,
+  };
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
@@ -138,12 +162,17 @@ module.exports = async function handler(req, res) {
       ],
     };
 
-    const options = await createShippingQuote(quotationPayload);
+    const quoteResult = await createShippingQuoteDetailed(quotationPayload);
+    const options = quoteResult.options;
 
     if (!options.length) {
       console.warn('[shipping_quote_no_options]', {
         destination_postal_code: postalCode,
         total_weight_grams: totalWeight,
+        source_count: quoteResult.source_count,
+        normalized_count: quoteResult.normalized_count,
+        candidate_index: quoteResult.candidate_index,
+        response_summary: summarizeSkydropxResponse(quoteResult.raw_response),
       });
       res.status(404).json({
         error: 'No hay opciones de envío disponibles para este código postal.',
