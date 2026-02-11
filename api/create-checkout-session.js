@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const { validateCheckoutPayload } = require('./lib/validation');
 const { getQuoteSnapshot } = require('./lib/validation');
+const { getCatalogEntryByPriceId } = require('./lib/catalog');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -44,10 +45,28 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const productLineItems = items.map((item) => ({
-      price: item.priceId,
-      quantity: item.quantity,
-    }));
+    const productLineItems = items.map((item) => {
+      const catalogEntry = getCatalogEntryByPriceId(item.priceId);
+      if (!catalogEntry) {
+        throw new Error(`Catalog entry not found for priceId: ${item.priceId}`);
+      }
+
+      const unitAmountCents = Math.round(Number(catalogEntry.priceMxn) * 100);
+      if (!Number.isInteger(unitAmountCents) || unitAmountCents <= 0) {
+        throw new Error(`Invalid catalog price for ${item.priceId}`);
+      }
+
+      return {
+        price_data: {
+          currency: 'mxn',
+          product_data: {
+            name: `${catalogEntry.productName} ${catalogEntry.size}`,
+          },
+          unit_amount: unitAmountCents,
+        },
+        quantity: item.quantity,
+      };
+    });
 
     const shippingAmountCents = Math.round(Number(shippingOption.price_mxn) * 100);
     if (!Number.isInteger(shippingAmountCents) || shippingAmountCents < 0) {

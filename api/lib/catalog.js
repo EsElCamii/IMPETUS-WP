@@ -1,23 +1,23 @@
 const CATALOG_ITEMS = [
   { productId: 'catuai-amarillo', name: 'Catuaí Amarillo', sizes: [
-    { label: '250g', grams: 250, priceId: 'price_1SxGX6CtADenWoLmOjLKR53u' },
-    { label: '500g', grams: 500, priceId: 'price_catuai_500g' },
-    { label: '1kg', grams: 1000, priceId: 'price_catuai_1kg' },
+    { label: '250g', grams: 250, priceMxn: 320, priceId: 'price_1SxGX6CtADenWoLmOjLKR53u' },
+    { label: '500g', grams: 500, priceMxn: 480, priceId: 'price_catuai_500g' },
+    { label: '1kg', grams: 1000, priceMxn: 860, priceId: 'price_catuai_1kg' },
   ] },
   { productId: 'zongolica', name: 'Zongolica', sizes: [
-    { label: '250g', grams: 250, priceId: 'price_zongolica_250g' },
-    { label: '500g', grams: 500, priceId: 'price_zongolica_500g' },
-    { label: '1kg', grams: 1000, priceId: 'price_zongolica_1kg' },
+    { label: '250g', grams: 250, priceMxn: 340, priceId: 'price_zongolica_250g' },
+    { label: '500g', grams: 500, priceMxn: 500, priceId: 'price_zongolica_500g' },
+    { label: '1kg', grams: 1000, priceMxn: 880, priceId: 'price_zongolica_1kg' },
   ] },
   { productId: 'cosautlan', name: 'Cosautlán', sizes: [
-    { label: '250g', grams: 250, priceId: 'price_cosautlan_250g' },
-    { label: '500g', grams: 500, priceId: 'price_cosautlan_500g' },
-    { label: '1kg', grams: 1000, priceId: 'price_cosautlan_1kg' },
+    { label: '250g', grams: 250, priceMxn: 330, priceId: 'price_cosautlan_250g' },
+    { label: '500g', grams: 500, priceMxn: 490, priceId: 'price_cosautlan_500g' },
+    { label: '1kg', grams: 1000, priceMxn: 870, priceId: 'price_cosautlan_1kg' },
   ] },
   { productId: 'corahe', name: 'Corahe', sizes: [
-    { label: '250g', grams: 250, priceId: 'price_corahe_250g' },
-    { label: '500g', grams: 500, priceId: 'price_corahe_500g' },
-    { label: '1kg', grams: 1000, priceId: 'price_corahe_1kg' },
+    { label: '250g', grams: 250, priceMxn: 300, priceId: 'price_corahe_250g' },
+    { label: '500g', grams: 500, priceMxn: 460, priceId: 'price_corahe_500g' },
+    { label: '1kg', grams: 1000, priceMxn: 830, priceId: 'price_corahe_1kg' },
   ] },
 ];
 
@@ -29,6 +29,7 @@ for (const product of CATALOG_ITEMS) {
       productId: product.productId,
       productName: product.name,
       grams: size.grams,
+      priceMxn: size.priceMxn,
       size: size.label,
       priceId: size.priceId,
     });

@@ -41,6 +41,25 @@
     return 0;
   };
 
+  const toDisplayLabel = (value, fallback = '') => {
+    if (typeof value === 'string' || typeof value === 'number') {
+      const normalized = String(value).trim();
+      return normalized || fallback;
+    }
+    if (value && typeof value === 'object') {
+      const candidates = [value.name, value.display_name, value.title, value.label, value.code];
+      for (const candidate of candidates) {
+        if (typeof candidate === 'string' || typeof candidate === 'number') {
+          const normalized = String(candidate).trim();
+          if (normalized) {
+            return normalized;
+          }
+        }
+      }
+    }
+    return fallback;
+  };
+
   const getSelectedOption = () =>
     shippingState.options.find((option) => option.option_id === shippingState.selectedOptionId) || null;
 
@@ -129,15 +148,20 @@
 
       const copy = document.createElement('div');
       copy.className = 'shipping-option-copy';
+      const provider = toDisplayLabel(option.provider, 'Proveedor');
+      const service = toDisplayLabel(option.service, 'Servicio');
       const eta = option.estimated_days ? `${option.estimated_days} días` : 'Tiempo por confirmar';
       copy.innerHTML = `
-        <strong>${option.provider} · ${option.service}</strong>
-        <span>Entrega estimada: ${eta}</span>
+        <strong>${provider}</strong>
+        <span>${service}</span>
+        <span class="shipping-option-meta">Entrega: ${eta}</span>
       `;
 
       const price = document.createElement('span');
       price.className = 'shipping-option-price';
       price.textContent = formatCurrency(Number(option.price_mxn || 0));
+
+      label.classList.toggle('is-selected', shippingState.selectedOptionId === option.option_id);
 
       label.appendChild(radio);
       label.appendChild(copy);
