@@ -678,6 +678,7 @@ async function createShippingQuote(payload) {
 async function createShippingQuoteDetailed(payload) {
   const candidates = buildQuotePayloadCandidates(payload);
   let lastError = null;
+  let lastEmptyResult = null;
 
   for (let i = 0; i < candidates.length; i += 1) {
     const candidate = candidates[i];
@@ -685,8 +686,7 @@ async function createShippingQuoteDetailed(payload) {
       const result = await skydropxRequest('/api/v1/quotations', candidate);
       const normalized = normalizeQuotationsResponse(result);
       const options = normalized.options;
-
-      return {
+      const quoteDetails = {
         options,
         strict_count: normalized.strictOptions.length,
         fallback_count: normalized.fallbackOptions.length,
@@ -695,6 +695,13 @@ async function createShippingQuoteDetailed(payload) {
         candidate_index: i,
         raw_response: result,
       };
+
+      if (options.length > 0) {
+        return quoteDetails;
+      }
+
+      lastEmptyResult = quoteDetails;
+      continue;
     } catch (error) {
       const statusCode = Number(error?.statusCode || 0);
       const isRetryableInvalidPayload = statusCode === 400 && i < candidates.length - 1;
@@ -712,6 +719,10 @@ async function createShippingQuoteDetailed(payload) {
   if (lastError) {
     lastError.attempts = candidates.length;
     throw lastError;
+  }
+
+  if (lastEmptyResult) {
+    return lastEmptyResult;
   }
 
   throw new Error('Skydropx quotation failed with no payload candidates to try');

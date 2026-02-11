@@ -519,7 +519,8 @@
       let response = null;
       let data = null;
 
-      for (let attempt = 0; attempt < 2; attempt += 1) {
+      const maxQuoteAttempts = 3;
+      for (let attempt = 0; attempt < maxQuoteAttempts; attempt += 1) {
         response = await fetch('/api/shipping-quote', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -535,10 +536,10 @@
           data = null;
         }
 
-        const firstAttemptNoOptions =
-          attempt === 0 && response.status === 404 && data?.debug_code === 'NO_SHIPPING_OPTIONS';
-        if (firstAttemptNoOptions) {
-          await delay(500);
+        const transientNoOptions = response.status === 404 && data?.debug_code === 'NO_SHIPPING_OPTIONS';
+        const canRetryNoOptions = transientNoOptions && attempt < maxQuoteAttempts - 1;
+        if (canRetryNoOptions) {
+          await delay(450 + attempt * 400);
           continue;
         }
 
