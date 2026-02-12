@@ -320,6 +320,10 @@ function pickEstimatedDays(value) {
     value.eta_min,
     value.eta_max,
     value.eta_business_days,
+    value.package_eta_days,
+    value.package_delivery_days,
+    value.package_eta,
+    value.package_delivery_time,
     value.transit_days,
     value.business_days,
     value.min_days,
@@ -363,6 +367,10 @@ function pickEstimatedText(value) {
     value.delivery_promise,
     value.promise,
     value.schedule,
+    value.package_eta_text,
+    value.package_eta,
+    value.package_delivery_time,
+    value.package_delivery_promise,
     value.service_level?.delivery_time,
     value.service_level?.estimated_delivery
   );
@@ -439,6 +447,9 @@ function normalizeQuotationEntry(value) {
     { source: 'product', value: value.product },
     { source: 'name', value: value.name },
     { source: 'service_code', value: value.service_code },
+    { source: 'package_type', value: value.package_type },
+    { source: 'package_service_type', value: value.package_service_type },
+    { source: 'package_delivery_type', value: value.package_delivery_type },
     { source: 'service', value: value.service },
   ]);
 
@@ -620,6 +631,9 @@ function extractQuotationEntries(responseBody) {
     return responseBody;
   }
 
+  const packageDefaults = getPackageDefaults(responseBody);
+  const packageEntries = extractPackageRateEntries(responseBody);
+
   const candidates = [
     responseBody?.data,
     responseBody?.quotations,
@@ -633,14 +647,107 @@ function extractQuotationEntries(responseBody) {
     responseBody?.quotation,
   ];
 
+  const collected = [];
   for (const candidate of candidates) {
     const entries = toEntryArray(candidate);
     if (entries.length > 0) {
-      return entries;
+      collected.push(...entries.map((entry) => ({ ...packageDefaults, ...entry })));
     }
   }
 
+  if (packageEntries.length > 0) {
+    collected.push(...packageEntries);
+  }
+
+  if (collected.length > 0) {
+    return collected;
+  }
+
   return [];
+}
+
+function getPackageDefaults(responseBody) {
+  const packages = extractPackages(responseBody);
+  if (!packages.length) {
+    return {};
+  }
+
+  const pkg = packages[0];
+  const estimatedDays = pickEstimatedDays(pkg);
+  const estimatedText = pickEstimatedText(pkg);
+
+  return {
+    package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+    package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+    package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+    package_eta_days: Number.isFinite(estimatedDays) ? estimatedDays : undefined,
+    package_eta_text: estimatedText || undefined,
+    package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time) || undefined,
+    package_delivery_days: pickText(pkg.delivery_days) || undefined,
+    package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+    package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+  };
+}
+
+function extractPackageRateEntries(responseBody) {
+  const packages = extractPackages(responseBody);
+  const entries = [];
+
+  for (const pkg of packages) {
+    const packageMeta = {
+      package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+      package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+      package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+      package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time, pkg.transit_time) || undefined,
+      package_eta_days: pickEstimatedDays(pkg) || undefined,
+      package_eta_text: pickEstimatedText(pkg) || undefined,
+      package_delivery_days: pickText(pkg.delivery_days) || undefined,
+      package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+      package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+    };
+
+    const rateCandidates = [
+      pkg.rates,
+      pkg.quotations,
+      pkg.results,
+      pkg.items,
+      pkg.options,
+      pkg.services,
+      pkg.data?.rates,
+      pkg.data?.quotations,
+      pkg.data?.results,
+      pkg.quotation_scope?.rates,
+    ];
+
+    for (const candidate of rateCandidates) {
+      const rateEntries = toEntryArray(candidate);
+      if (rateEntries.length > 0) {
+        rateEntries.forEach((rate) => {
+          entries.push({ ...packageMeta, ...rate });
+        });
+      }
+    }
+  }
+
+  return entries;
+}
+
+function extractPackages(responseBody) {
+  const packageCandidates = [
+    responseBody?.packages,
+    responseBody?.data?.packages,
+    responseBody?.quotation_scope?.packages,
+  ];
+
+  const collected = [];
+  for (const candidate of packageCandidates) {
+    const entries = toEntryArray(candidate).filter((entry) => entry && typeof entry === 'object');
+    if (entries.length > 0) {
+      collected.push(...entries);
+    }
+  }
+
+  return collected;
 }
 
 function toEntryArray(candidate) {
