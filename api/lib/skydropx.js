@@ -316,6 +316,10 @@ function pickEstimatedDays(value) {
     value.delivery_days,
     value.delivery_time_days,
     value.eta_days,
+    value.eta,
+    value.eta_min,
+    value.eta_max,
+    value.eta_business_days,
     value.transit_days,
     value.business_days,
     value.min_days,
@@ -422,6 +426,10 @@ function normalizeQuotationEntry(value) {
   ]);
 
   const { value: serviceFromPayload } = pickSourceAndText([
+    { source: 'type', value: value.type },
+    { source: 'service_type', value: value.service_type },
+    { source: 'service.type', value: value.service?.type },
+    { source: 'service.level', value: value.service?.level },
     { source: 'service_level_name', value: value.service_level_name },
     { source: 'service_level.name', value: value.service_level?.name },
     { source: 'service_name', value: value.service_name },

@@ -585,6 +585,57 @@
     }
   };
 
+  const testOrderQuote = async ({ postalCode, includeRaw = false } = {}) => {
+    const cart = readCart();
+    if (!cart.items.length) {
+      throw new Error('El carrito esta vacio.');
+    }
+
+    const resolvedPostalCode = String(postalCode || postalInput?.value || '').trim();
+    if (!/^\d{5}$/.test(resolvedPostalCode)) {
+      throw new Error('Ingresa un codigo postal valido de 5 digitos.');
+    }
+
+    const response = await fetch('/api/order-quote-test', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        postal_code: resolvedPostalCode,
+        include_raw: includeRaw === true,
+        items: cart.items.map((item) => ({
+          priceId: item.priceId,
+          quantity: item.qty,
+        })),
+      }),
+    });
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      data = null;
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.error || 'No se pudo ejecutar la prueba de cotizacion.');
+    }
+
+    console.groupCollapsed(`[order-quote-test] CP ${resolvedPostalCode}`);
+    console.log('diagnostics', data?.diagnostics || null);
+    console.log('options', data?.options || []);
+    console.log('raw_entry_sample', data?.raw_entry_sample || []);
+    if (includeRaw) {
+      console.log('raw_response', data?.raw_response || null);
+    }
+    console.groupEnd();
+
+    if (quoteFeedback) {
+      quoteFeedback.textContent = 'Prueba completada. Revisa la consola para ver type/express y eta.';
+    }
+
+    return data;
+  };
+
   const checkout = async () => {
     if (isCheckoutInProgress) {
       return;
@@ -690,6 +741,7 @@
     open,
     close,
     renderCart,
+    testOrderQuote,
   };
 
   updateCount();
