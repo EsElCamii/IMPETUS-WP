@@ -80,21 +80,27 @@ async function getSkydropxToken(forceRefresh = false) {
   return requestToken();
 }
 
-async function skydropxRequest(path, payload, attempt = 0) {
+async function skydropxRequest(path, payload, attempt = 0, method = 'POST') {
   const token = await getSkydropxToken(attempt > 0);
   const requestUrl = `${SKYDROPX_API_BASE}${path}`;
+  const resolvedMethod = String(method || 'POST').toUpperCase();
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+  const requestInit = {
+    method: resolvedMethod,
+    headers,
+  };
 
-  const response = await fetch(requestUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  if (resolvedMethod !== 'GET') {
+    headers['Content-Type'] = 'application/json';
+    requestInit.body = JSON.stringify(payload || {});
+  }
+
+  const response = await fetch(requestUrl, requestInit);
 
   if (response.status === 401 && attempt === 0) {
-    return skydropxRequest(path, payload, 1);
+    return skydropxRequest(path, payload, 1, resolvedMethod);
   }
 
   const json = await safeReadJson(response);
@@ -904,6 +910,82 @@ function minOptionPrice(optionList) {
   return Math.min(...prices);
 }
 
+function hasServiceMetadata(option) {
+  const normalizedService = normalizeLabelForKey(option?.service);
+  return Boolean(normalizedService && !isGenericServiceLabel(normalizedService));
+}
+
+function hasEtaMetadata(option) {
+  const days = Number(option?.estimated_days);
+  const hasDays = Number.isFinite(days) && days > 0;
+  const hasText = Boolean(String(option?.estimated_text || '').trim());
+  return hasDays || hasText;
+}
+
+function optionMetadataScore(optionList) {
+  const options = Array.isArray(optionList) ? optionList : [];
+  let score = 0;
+
+  for (const option of options) {
+    if (hasServiceMetadata(option)) {
+      score += 1;
+    }
+    if (hasEtaMetadata(option)) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+function pickQuotationIdFromResponse(responseBody) {
+  return String(
+    responseBody?.id ||
+      responseBody?.quotation_id ||
+      responseBody?.quote_id ||
+      responseBody?.quotation_scope?.id ||
+      ''
+  ).trim();
+}
+
+function shouldFetchQuotationDetails(quotationId, options) {
+  if (!quotationId) {
+    return false;
+  }
+
+  const optionList = Array.isArray(options) ? options : [];
+  if (!optionList.length) {
+    return false;
+  }
+
+  const missingServiceForAll = optionList.every((option) => !hasServiceMetadata(option));
+  const missingEtaForAll = optionList.every((option) => !hasEtaMetadata(option));
+  return missingServiceForAll || missingEtaForAll;
+}
+
+function isDetailsResponseBetter(initialOptions, detailedOptions) {
+  const initial = Array.isArray(initialOptions) ? initialOptions : [];
+  const detailed = Array.isArray(detailedOptions) ? detailedOptions : [];
+  if (!detailed.length) {
+    return false;
+  }
+
+  if (detailed.length !== initial.length) {
+    return detailed.length > initial.length;
+  }
+
+  return optionMetadataScore(detailed) > optionMetadataScore(initial);
+}
+
+async function fetchQuotationDetails(quotationId) {
+  if (!quotationId) {
+    return null;
+  }
+
+  const encodedId = encodeURIComponent(quotationId);
+  return skydropxRequest(`/api/v1/quotations/${encodedId}`, null, 0, 'GET');
+}
+
 function isBetterQuoteResult(candidate, currentBest) {
   if (!currentBest) {
     return true;
@@ -919,6 +1001,12 @@ function isBetterQuoteResult(candidate, currentBest) {
   const currentStrict = Number(currentBest?.strict_count || 0);
   if (candidateStrict !== currentStrict) {
     return candidateStrict > currentStrict;
+  }
+
+  const candidateMetadataScore = optionMetadataScore(candidate?.options);
+  const currentMetadataScore = optionMetadataScore(currentBest?.options);
+  if (candidateMetadataScore !== currentMetadataScore) {
+    return candidateMetadataScore > currentMetadataScore;
   }
 
   const candidateMinPrice = minOptionPrice(candidate?.options);
@@ -942,7 +1030,23 @@ async function createShippingQuoteDetailed(payload) {
     try {
       for (let emptyAttempt = 0; emptyAttempt <= EMPTY_RESPONSE_RETRY_DELAYS_MS.length; emptyAttempt += 1) {
         const result = await skydropxRequest('/api/v1/quotations', candidate);
-        const normalized = normalizeQuotationsResponse(result);
+        let selectedResponse = result;
+        let normalized = normalizeQuotationsResponse(result);
+
+        const quotationId = pickQuotationIdFromResponse(result);
+        if (shouldFetchQuotationDetails(quotationId, normalized.options)) {
+          try {
+            const detailedResponse = await fetchQuotationDetails(quotationId);
+            const detailedNormalized = normalizeQuotationsResponse(detailedResponse);
+            if (isDetailsResponseBetter(normalized.options, detailedNormalized.options)) {
+              selectedResponse = detailedResponse;
+              normalized = detailedNormalized;
+            }
+          } catch (detailsError) {
+            // Best-effort enrichment. Keep the original normalized response on detail request failures.
+          }
+        }
+
         const options = normalized.options;
         const quoteDetails = {
           options,
@@ -951,7 +1055,7 @@ async function createShippingQuoteDetailed(payload) {
           source_count: normalized.source_count,
           normalized_count: options.length,
           candidate_index: i,
-          raw_response: result,
+          raw_response: selectedResponse,
         };
 
         if (isBetterQuoteResult(quoteDetails, bestCandidateResult)) {
