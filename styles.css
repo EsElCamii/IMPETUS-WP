@@ -1928,18 +1928,36 @@ button {
 }
 
 .product-link {
-  min-height: 260px;
+  min-height: 270px;
   display: grid;
   place-items: center;
   border-radius: 18px;
   padding: 12px;
-  background: linear-gradient(180deg, #fcfbf8 0%, #f2ede3 100%);
+  background: linear-gradient(180deg, #faf6ed 0%, #e9dfca 100%);
 }
 
 .product-link img {
-  max-height: 270px;
-  width: 100%;
+  max-height: 282px;
+  max-width: 84%;
+  width: auto;
   object-fit: contain;
+  object-position: center center;
+  transform-origin: center center;
+  transition: transform 0.22s ease;
+}
+
+.product-card[data-product-id="el-guayabal"] .product-link img,
+.product-card[data-product-id="corahe"] .product-link img,
+.product-card[data-product-id="zongolica"] .product-link img {
+  transform: scale(1.22);
+}
+
+.product-card[data-product-id="cosautlan"] .product-link img {
+  transform: scale(1.08);
+}
+
+.product-card[data-product-id="catuai-amarillo"] .product-link img {
+  transform: scale(1.02);
 }
 
 .product-card-meta {
