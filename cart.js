@@ -21,8 +21,148 @@
     postalCode: '',
     sortBy: 'lowest',
   };
+  const productsSource = typeof PRODUCTS !== 'undefined' ? PRODUCTS : window.PRODUCTS || [];
+  let cartSanitizedMessage = '';
   let isFetchingQuote = false;
   let isCheckoutInProgress = false;
+
+  const isPlainObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+  const parsePresentationGrams = (value) => {
+    const text = String(value || '').toLowerCase().replace(/\s+/g, '');
+    if (!text) {
+      return null;
+    }
+
+    const kgMatch = text.match(/(\d+(?:\.\d+)?)kg/);
+    if (kgMatch) {
+      return Math.round(Number(kgMatch[1]) * 1000);
+    }
+
+    const gramMatch = text.match(/(\d+(?:\.\d+)?)(?:g|gr|gr\.)/);
+    if (gramMatch) {
+      return Math.round(Number(gramMatch[1]));
+    }
+
+    return null;
+  };
+
+  const getProductSizes = (product) => {
+    if (!product) {
+      return [];
+    }
+
+    if (Array.isArray(product.sizes) && product.sizes.length) {
+      return product.sizes;
+    }
+
+    const fallbackGrams =
+      parsePresentationGrams(product.presentation || product.weight) ||
+      Number.parseInt(product.weight, 10) ||
+      null;
+
+    if (!product.priceId) {
+      return [];
+    }
+
+    return [
+      {
+        label: product.presentation || product.weight || '',
+        grams: fallbackGrams,
+        price: Number(product.priceValue || 0),
+        priceId: product.priceId,
+      },
+    ];
+  };
+
+  const sanitizeCartItem = (item) => {
+    if (!isPlainObject(item)) {
+      return { item: null, changed: true, removed: true };
+    }
+
+    const product =
+      productsSource.find((entry) => entry.id === item.id) ||
+      productsSource.find((entry) => getProductSizes(entry).some((size) => size.priceId === item.priceId));
+
+    if (!product) {
+      return { item: null, changed: true, removed: true };
+    }
+
+    const sizes = getProductSizes(product);
+    const requestedGrams = parsePresentationGrams(item.presentation || item.size);
+    const matchedSize =
+      sizes.find((size) => size.priceId === item.priceId) ||
+      sizes.find((size) => requestedGrams && Number(size.grams) === requestedGrams) ||
+      (sizes.length === 1 ? sizes[0] : null);
+
+    if (!matchedSize?.priceId) {
+      return { item: null, changed: true, removed: true };
+    }
+
+    const qty = Math.max(1, Number.parseInt(item.qty, 10) || 1);
+    const presentation = matchedSize.label || product.presentation || item.presentation || item.size || '';
+    const priceValue = Number(matchedSize.price || product.priceValue || 0);
+    const normalizedItem = {
+      ...item,
+      id: product.id,
+      name: product.name || item.name || 'Producto',
+      image: item.image || product.image || '',
+      priceId: matchedSize.priceId,
+      priceValue,
+      price: priceValue > 0 ? `$${priceValue}` : item.price || '',
+      presentation,
+      size: presentation,
+      qty,
+    };
+
+    const changed =
+      normalizedItem.id !== item.id ||
+      normalizedItem.priceId !== item.priceId ||
+      normalizedItem.presentation !== (item.presentation || '') ||
+      normalizedItem.size !== (item.size || '') ||
+      normalizedItem.qty !== item.qty ||
+      normalizedItem.priceValue !== item.priceValue ||
+      normalizedItem.name !== item.name ||
+      normalizedItem.image !== item.image;
+
+    return { item: normalizedItem, changed, removed: false };
+  };
+
+  const sanitizeCartPayload = (cart) => {
+    if (!isPlainObject(cart) || !Array.isArray(cart.items)) {
+      return { cart: { items: [] }, changed: true, removedCount: 0 };
+    }
+
+    let changed = false;
+    let removedCount = 0;
+    const items = [];
+
+    cart.items.forEach((item) => {
+      const result = sanitizeCartItem(item);
+      if (!result.item) {
+        changed = true;
+        removedCount += 1;
+        return;
+      }
+
+      changed = changed || result.changed;
+      items.push(result.item);
+    });
+
+    return {
+      cart: { ...cart, items },
+      changed,
+      removedCount,
+    };
+  };
+
+  const persistCart = (cart) => {
+    try {
+      localStorage.setItem(CART_KEY, JSON.stringify(cart));
+    } catch (error) {
+      // ignore storage errors
+    }
+  };
 
   const formatCurrency = (value) => {
     if (typeof value !== 'number' || Number.isNaN(value)) {
@@ -162,7 +302,16 @@
       return 'No se pudo cotizar el envío en este momento. Intenta nuevamente.';
     }
     if (statusCode === 400) {
-      return 'Revisa el código postal e intenta de nuevo.';
+      if (/postal_code/i.test(rawMessage)) {
+        return 'Revisa el código postal e intenta de nuevo.';
+      }
+      if (/priceid|unsupported/i.test(rawMessage)) {
+        return 'Había productos desactualizados en tu carrito. Vuelve a revisar tu selección antes de cotizar.';
+      }
+      if (/items must|item must/i.test(rawMessage)) {
+        return 'Tu carrito no se pudo validar para la cotización. Revisa los productos e intenta nuevamente.';
+      }
+      return rawMessage || 'No se pudo validar la cotización de envío.';
     }
     if (/Skydropx request failed/i.test(rawMessage)) {
       return 'No se pudo cotizar el envío para este código postal por ahora.';
@@ -245,18 +394,22 @@
       if (!raw) {
         return { items: [] };
       }
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      const { cart, changed, removedCount } = sanitizeCartPayload(parsed);
+      if (changed) {
+        persistCart(cart);
+        cartSanitizedMessage = removedCount
+          ? 'Actualizamos tu carrito para coincidir con el catálogo actual. Revisa tus productos antes de cotizar.'
+          : 'Actualizamos tu carrito para coincidir con el catálogo actual.';
+      }
+      return cart;
     } catch (error) {
       return { items: [] };
     }
   };
 
   const writeCart = (cart) => {
-    try {
-      localStorage.setItem(CART_KEY, JSON.stringify(cart));
-    } catch (error) {
-      // ignore storage errors
-    }
+    persistCart(cart);
     updateCount(cart);
     renderCart(cart);
     resetShippingQuote('Selecciona código postal y cotiza envío nuevamente.');
@@ -610,6 +763,10 @@
 
     const cart = readCart();
     if (!cart.items.length) {
+      if (quoteFeedback) {
+        quoteFeedback.textContent = cartSanitizedMessage || 'Tu carrito está vacío.';
+        cartSanitizedMessage = '';
+      }
       return;
     }
 
