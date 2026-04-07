@@ -231,6 +231,23 @@
     '99minutos': '99minutos',
   };
 
+  const PROVIDER_BRANDS = {
+    dhl: { label: 'DHL', className: 'shipping-option-logo--dhl' },
+    fedex: { label: 'FedEx', className: 'shipping-option-logo--fedex' },
+    estafeta: { label: 'Estafeta', className: 'shipping-option-logo--estafeta' },
+    ninetynineminutes: { label: '99min', className: 'shipping-option-logo--99minutos' },
+    '99minutos': { label: '99min', className: 'shipping-option-logo--99minutos' },
+  };
+
+  const normalizeLabelKey = (text) =>
+    String(text || '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[._-]+/g, ' ')
+      .replace(/\s+/g, '');
+
   const prettifyLabel = (text) => {
     const normalized = String(text || '')
       .replace(/[._-]+/g, ' ')
@@ -260,30 +277,28 @@
   };
 
   const formatEta = (option) => {
-    const rawText = toDisplayLabel(
-      option.estimated_text || option.estimated_delivery || option.delivery_time || option.transit_time,
-      ''
-    );
-    if (rawText) {
-      return rawText;
-    }
-
     const minDays = parseEstimatedDays(option.estimated_min_days || option.min_days || option.eta_min_days);
     const maxDays = parseEstimatedDays(option.estimated_max_days || option.max_days || option.eta_max_days);
 
     if (minDays && maxDays) {
-      if (minDays === maxDays) {
-        return minDays === 1 ? '1 día hábil' : `${minDays} días hábiles`;
-      }
-      return `${Math.min(minDays, maxDays)} a ${Math.max(minDays, maxDays)} días hábiles`;
+      const optimisticDays = Math.min(minDays, maxDays);
+      return optimisticDays === 1 ? 'Aprox. 1 día hábil' : `Aprox. ${optimisticDays} días hábiles`;
     }
 
     const days = parseEstimatedDays(option.estimated_days || option.delivery_days || option.eta_days);
     if (days) {
-      return days === 1 ? '1 día hábil' : `${days} días hábiles`;
+      return days === 1 ? 'Aprox. 1 día hábil' : `Aprox. ${days} días hábiles`;
     }
 
-    return 'Tiempo por confirmar';
+    const rawText = toDisplayLabel(
+      option.estimated_text || option.estimated_delivery || option.delivery_time || option.transit_time,
+      ''
+    );
+    if (rawText && !/confirmar|pendiente|n\/a|na/i.test(rawText)) {
+      return `Aprox. ${rawText}`;
+    }
+
+    return '';
   };
 
   const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -424,18 +439,10 @@
   };
 
   const OPTION_WARNING_MESSAGES = {
-    missing_option_id_original: 'Identificador de tarifa reconstruido automáticamente.',
-    missing_provider: 'Proveedor no especificado por la paquetería.',
-    missing_service: 'Tipo de servicio no especificado por la paquetería.',
     insufficient_metadata_for_checkout: 'No disponible para finalizar compra.',
   };
 
-  const OPTION_WARNING_PRIORITY = [
-    'insufficient_metadata_for_checkout',
-    'missing_provider',
-    'missing_service',
-    'missing_option_id_original',
-  ];
+  const OPTION_WARNING_PRIORITY = ['insufficient_metadata_for_checkout'];
 
   const getOptionNote = (option) => {
     if (!isSelectableOption(option)) {
@@ -451,6 +458,16 @@
     }
 
     return '';
+  };
+
+  const hasMissingWarning = (option, code) => {
+    const warnings = Array.isArray(option?.warnings) ? option.warnings : [];
+    return warnings.includes(code);
+  };
+
+  const getProviderBrand = (provider) => {
+    const key = normalizeLabelKey(provider);
+    return PROVIDER_BRANDS[key] || null;
   };
 
   const isExpressOption = (option) => {
@@ -535,16 +552,26 @@
     const provider = prettifyLabel(toDisplayLabel(option.provider, 'Paquetería'));
     const service = prettifyLabel(toDisplayLabel(option.service, ''));
     const eta = formatEta(option);
-    const serviceText =
-      service && service.toLowerCase() !== provider.toLowerCase() ? service : 'Servicio estándar';
+    const brand = getProviderBrand(provider);
+    const hasRealService =
+      Boolean(service) &&
+      service.toLowerCase() !== provider.toLowerCase() &&
+      !hasMissingWarning(option, 'missing_service') &&
+      !/^servicio estandar|^servicio estándar|^standard$/i.test(service);
+
+    const headerRow = document.createElement('div');
+    headerRow.className = 'shipping-option-provider';
+
+    if (brand) {
+      const logo = document.createElement('span');
+      logo.className = `shipping-option-logo ${brand.className}`;
+      logo.textContent = brand.label;
+      headerRow.appendChild(logo);
+    }
 
     const titleEl = document.createElement('strong');
     titleEl.textContent = provider;
-    const serviceEl = document.createElement('span');
-    serviceEl.textContent = serviceText;
-    const etaEl = document.createElement('span');
-    etaEl.className = 'shipping-option-meta';
-    etaEl.textContent = `Entrega: ${eta}`;
+    headerRow.appendChild(titleEl);
 
     const badges = [];
     if (option?.option_id && option.option_id === context.cheapestOptionId) {
@@ -566,9 +593,20 @@
       copy.appendChild(badgesWrap);
     }
 
-    copy.appendChild(titleEl);
-    copy.appendChild(serviceEl);
-    copy.appendChild(etaEl);
+    copy.appendChild(headerRow);
+
+    if (hasRealService) {
+      const serviceEl = document.createElement('span');
+      serviceEl.textContent = service;
+      copy.appendChild(serviceEl);
+    }
+
+    if (eta) {
+      const etaEl = document.createElement('span');
+      etaEl.className = 'shipping-option-meta';
+      etaEl.textContent = eta;
+      copy.appendChild(etaEl);
+    }
 
     const note = getOptionNote(option);
     if (note) {

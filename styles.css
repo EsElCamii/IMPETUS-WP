@@ -1393,10 +1393,57 @@ button {
   min-width: 0;
 }
 
+.shipping-option-provider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.shipping-option-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  border: 1px solid transparent;
+  flex-shrink: 0;
+}
+
+.shipping-option-logo--dhl {
+  background: #ffd21e;
+  color: #cf102d;
+  border-color: rgba(207, 16, 45, 0.12);
+}
+
+.shipping-option-logo--fedex {
+  background: #f4efff;
+  color: #4d148c;
+  border-color: rgba(77, 20, 140, 0.12);
+}
+
+.shipping-option-logo--estafeta {
+  background: #fff1eb;
+  color: #ea5b0c;
+  border-color: rgba(234, 91, 12, 0.16);
+}
+
+.shipping-option-logo--99minutos {
+  background: #ecfbf1;
+  color: #178f47;
+  border-color: rgba(23, 143, 71, 0.16);
+}
+
 .shipping-option-copy strong {
   font-size: 16px;
   font-weight: 700;
   line-height: 1.2;
+  min-width: 0;
 }
 
 .shipping-option-copy span {
