@@ -232,11 +232,36 @@
   };
 
   const PROVIDER_BRANDS = {
-    dhl: { label: 'DHL', className: 'shipping-option-logo--dhl' },
-    fedex: { label: 'FedEx', className: 'shipping-option-logo--fedex' },
-    estafeta: { label: 'Estafeta', className: 'shipping-option-logo--estafeta' },
-    ninetynineminutes: { label: '99min', className: 'shipping-option-logo--99minutos' },
-    '99minutos': { label: '99min', className: 'shipping-option-logo--99minutos' },
+    dhl: {
+      label: 'DHL',
+      className: 'shipping-option-logo--dhl',
+      image: 'images/Shipping-Companies/DHL Logo.png',
+      imageAlt: 'DHL',
+    },
+    fedex: {
+      label: 'FedEx',
+      className: 'shipping-option-logo--fedex',
+      image: 'images/Shipping-Companies/FedEx Circle Icon.png',
+      imageAlt: 'FedEx',
+    },
+    estafeta: {
+      label: 'Estafeta',
+      className: 'shipping-option-logo--estafeta',
+      image: 'images/Shipping-Companies/Estafeta Logo.png',
+      imageAlt: 'Estafeta',
+    },
+    ninetynineminutes: {
+      label: '99min',
+      className: 'shipping-option-logo--99minutos',
+      image: 'images/Shipping-Companies/99 Minutos Logo.png',
+      imageAlt: '99 Minutos',
+    },
+    '99minutos': {
+      label: '99min',
+      className: 'shipping-option-logo--99minutos',
+      image: 'images/Shipping-Companies/99 Minutos Logo.png',
+      imageAlt: '99 Minutos',
+    },
   };
 
   const normalizeLabelKey = (text) =>
@@ -565,7 +590,15 @@
     if (brand) {
       const logo = document.createElement('span');
       logo.className = `shipping-option-logo ${brand.className}`;
-      logo.textContent = brand.label;
+      if (brand.image) {
+        const logoImg = document.createElement('img');
+        logoImg.src = brand.image;
+        logoImg.alt = brand.imageAlt || brand.label;
+        logoImg.loading = 'lazy';
+        logo.appendChild(logoImg);
+      } else {
+        logo.textContent = brand.label;
+      }
       headerRow.appendChild(logo);
     }
 
