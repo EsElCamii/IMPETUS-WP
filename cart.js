@@ -391,7 +391,11 @@
 
         const meta = document.createElement('p');
         meta.className = 'cart-item-meta';
-        meta.textContent = `${item.size || '—'} · ${item.grind || '—'}`;
+        meta.textContent = [
+          item.presentation || item.size || '—',
+          item.roast || '—',
+          item.grind || '—',
+        ].join(' · ');
         info.appendChild(meta);
 
         const bottom = document.createElement('div');
@@ -443,16 +447,24 @@
 
   const findMatchingItem = (cart, item) =>
     cart.items.find(
-      (entry) => entry.id === item.id && entry.size === item.size && entry.grind === item.grind
+      (entry) =>
+        entry.id === item.id &&
+        (entry.presentation || entry.size) === (item.presentation || item.size) &&
+        entry.roast === item.roast &&
+        entry.grind === item.grind
     );
 
   const addItem = (item) => {
     const cart = readCart();
-    const existing = findMatchingItem(cart, item);
+    const normalizedItem = {
+      ...item,
+      presentation: item.presentation || item.size || '',
+    };
+    const existing = findMatchingItem(cart, normalizedItem);
     if (existing) {
-      existing.qty += item.qty;
+      existing.qty += normalizedItem.qty;
     } else {
-      cart.items.push(item);
+      cart.items.push(normalizedItem);
     }
     writeCart(cart);
   };
@@ -470,7 +482,13 @@
   const removeItem = (item) => {
     const cart = readCart();
     cart.items = cart.items.filter(
-      (entry) => !(entry.id === item.id && entry.size === item.size && entry.grind === item.grind)
+      (entry) =>
+        !(
+          entry.id === item.id &&
+          (entry.presentation || entry.size) === (item.presentation || item.size) &&
+          entry.roast === item.roast &&
+          entry.grind === item.grind
+        )
     );
     writeCart(cart);
   };
@@ -678,6 +696,9 @@
           items: cart.items.map((item) => ({
             priceId: item.priceId,
             quantity: item.qty,
+            roast: item.roast,
+            grind: item.grind,
+            presentation: item.presentation || item.size || '',
           })),
           quote_id: shippingState.quoteId,
           quote_token: shippingState.quoteToken,

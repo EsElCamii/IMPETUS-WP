@@ -1,24 +1,64 @@
 const CATALOG_ITEMS = [
-  { productId: 'catuai-amarillo', name: 'Catuaí Amarillo', sizes: [
-    { label: '250g', grams: 250, priceMxn: 320, priceId: 'price_1SxGX6CtADenWoLmOjLKR53u' },
-    { label: '500g', grams: 500, priceMxn: 480, priceId: 'price_catuai_500g' },
-    { label: '1kg', grams: 1000, priceMxn: 860, priceId: 'price_catuai_1kg' },
-  ] },
-  { productId: 'zongolica', name: 'Zongolica', sizes: [
-    { label: '250g', grams: 250, priceMxn: 340, priceId: 'price_zongolica_250g' },
-    { label: '500g', grams: 500, priceMxn: 500, priceId: 'price_zongolica_500g' },
-    { label: '1kg', grams: 1000, priceMxn: 880, priceId: 'price_zongolica_1kg' },
-  ] },
-  { productId: 'cosautlan', name: 'Cosautlán', sizes: [
-    { label: '250g', grams: 250, priceMxn: 330, priceId: 'price_cosautlan_250g' },
-    { label: '500g', grams: 500, priceMxn: 490, priceId: 'price_cosautlan_500g' },
-    { label: '1kg', grams: 1000, priceMxn: 870, priceId: 'price_cosautlan_1kg' },
-  ] },
-  { productId: 'corahe', name: 'Corahe', sizes: [
-    { label: '250g', grams: 250, priceMxn: 300, priceId: 'price_corahe_250g' },
-    { label: '500g', grams: 500, priceMxn: 460, priceId: 'price_corahe_500g' },
-    { label: '1kg', grams: 1000, priceMxn: 830, priceId: 'price_corahe_1kg' },
-  ] },
+  {
+    productId: "el-guayabal",
+    name: "El Guayabal",
+    sizes: [
+      {
+        label: "250 gr.",
+        grams: 250,
+        priceMxn: 400,
+        priceId: "price_el_guayabal_250g",
+      },
+    ],
+  },
+  {
+    productId: "catuai-amarillo",
+    name: "Catuaí Amarillo",
+    sizes: [
+      {
+        label: "500 gr.",
+        grams: 500,
+        priceMxn: 580,
+        priceId: "price_catuai_amarillo_500g",
+      },
+    ],
+  },
+  {
+    productId: "corahe",
+    name: "Corahe",
+    sizes: [
+      {
+        label: "500 gr.",
+        grams: 500,
+        priceMxn: 520,
+        priceId: "price_corahe_500g",
+      },
+    ],
+  },
+  {
+    productId: "cosautlan",
+    name: "Cosautlán",
+    sizes: [
+      {
+        label: "500 gr.",
+        grams: 500,
+        priceMxn: 442,
+        priceId: "price_cosautlan_500g",
+      },
+    ],
+  },
+  {
+    productId: "zongolica",
+    name: "Zongolica",
+    sizes: [
+      {
+        label: "500 gr.",
+        grams: 500,
+        priceMxn: 450,
+        priceId: "price_zongolica_500g",
+      },
+    ],
+  },
 ];
 
 const PRICE_ID_MAP = new Map();

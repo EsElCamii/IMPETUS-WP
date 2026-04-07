@@ -20,7 +20,7 @@ const buildResultItem = (product) => {
   const meta = document.createElement("div");
   meta.className = "search-result-meta";
   const origin = product.origin ? product.origin : "";
-  const notes = product.notes ? ` · ${product.notes}` : "";
+  const notes = product.cupScore ? ` · ${product.cupScore} pts` : product.notes ? ` · ${product.notes}` : "";
   const price = product.price ? ` · ${product.price}` : "";
   meta.textContent = `${origin}${notes}${price}`.trim();
 
@@ -45,10 +45,23 @@ const filterProducts = (query) => {
   return searchProducts.filter((product) => {
     const haystack = [
       product.name,
+      product.summary,
       product.description,
       product.origin,
       product.notes,
       product.badge,
+      product.process,
+      product.fermentation,
+      product.drying,
+      product.producer,
+      product.variety,
+      product.locality,
+      product.farm,
+      product.altitude,
+      product.category,
+      Array.isArray(product.tastingNotes) ? product.tastingNotes.join(" ") : "",
+      Array.isArray(product.roastOptions) ? product.roastOptions.join(" ") : "",
+      Array.isArray(product.grindOptions) ? product.grindOptions.join(" ") : "",
     ]
       .filter(Boolean)
       .join(" ")

@@ -1,6 +1,7 @@
 const Stripe = require('stripe');
 const { createShipment } = require('./lib/skydropx');
 const { insertOrder, findOrderBySessionId } = require('./lib/supabase');
+const { parseCheckoutItems } = require('./lib/checkout-items');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -15,14 +16,7 @@ async function readRawBody(req) {
 }
 
 function parseItems(metadataItems) {
-  if (!metadataItems) {
-    return null;
-  }
-  try {
-    return JSON.parse(metadataItems);
-  } catch (error) {
-    return metadataItems;
-  }
+  return parseCheckoutItems(metadataItems);
 }
 
 function buildRecipientFromSession(session) {

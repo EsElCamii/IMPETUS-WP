@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Impetus landing page">
+  <meta name="description" content="IMPETUS Casa Tostadora de Café. Cinco orígenes vivos de Veracruz, tostados en el Heroico Puerto de Veracruz.">
   <title>Impetus Café | Tienda en línea</title>
   <link rel="icon" href="images/favicon-logo-impetus.png" type="image/png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,10 +18,12 @@
         <a class="logo-link" href="index.html">
           <img src="images/image-3-145.png" class="logo" alt="Impetus">
         </a>
-        
+
         <div class="nav-group">
           <nav class="main-nav" aria-label="Principal">
             <a href="catalogo.html">Catalogo</a>
+            <a href="nosotros.html">Nosotros</a>
+            <a href="sucursales.html">Sucursales</a>
             <a href="contacto.html">Contacto</a>
           </nav>
 
@@ -35,7 +37,7 @@
               </form>
               <div class="search-results" aria-live="polite"></div>
             </div>
-        </div>
+          </div>
 
           <button class="cart-button" type="button" aria-label="Carrito">
             <span class="cart-icon" aria-hidden="true">
@@ -44,7 +46,7 @@
               <img src="images/vector-163.svg" class="cart-dot cart-dot-left" alt="">
               <img src="images/vector-164.svg" class="cart-dot cart-dot-right" alt="">
             </span>
-            <span class="cart-count">2</span>
+            <span class="cart-count">0</span>
           </button>
         </div>
       </div>
@@ -55,13 +57,16 @@
         <img src="images/bg-hero-131.png" class="hero-bg" alt="" aria-hidden="true">
         <div class="container container-left hero-inner">
           <div class="hero-media">
-            <img src="images/node-133.png" class="hero-product" alt="Catuaí Amarillo">
+            <img src="images/node-21.png" class="hero-product" alt="Catuaí Amarillo">
           </div>
           <div class="hero-content">
-            <span class="eyebrow">Lo mas nuevo...</span>
+            <span class="eyebrow">Casa tostadora de café</span>
             <h1>Conoce nuestra nueva selección!</h1>
-            <p>Prueba nuestros nuevos tostados, originarios de Veracruz.</p>
-            <a class="button button-primary" href="#featured">Explora</a>
+            <p>Tostamos en el Heroico Puerto de Veracruz una selección de lotes que van del perfil clásico serrano a procesos experimentales para filtro y espresso.</p>
+            <div class="hero-actions">
+              <a class="button button-primary" href="#featured">Explora la selección</a>
+              <a class="button button-light" href="nosotros.html">Conoce IMPETUS</a>
+            </div>
           </div>
         </div>
       </section>
@@ -71,41 +76,32 @@
         <div class="container featured-inner">
           <div class="featured-header">
             <div>
-              <h2>Destacados</h2>
+              <p class="section-eyebrow">Selección actual</p>
+              <h2>Origen por origen.</h2>
             </div>
             <a class="section-link" href="catalogo.html">Ver catálogo completo</a>
           </div>
           <div class="product-grid">
+            <article class="product-card" data-product-id="el-guayabal">
+              <a class="product-link" href="product.html?id=el-guayabal&img=images/node-96.png" aria-label="Ver El Guayabal">
+                <img src="images/node-96.png" alt="El Guayabal">
+              </a>
+              <h3>El Guayabal</h3>
+              <p class="product-card-meta">87.13 pts · Gesha · Ixhuatlán del Café</p>
+              <span class="price">$400</span>
+              <button class="add-to-cart" type="button">
+                <img src="images/icon-27.svg" alt="">
+                <span>Añade al carrito</span>
+              </button>
+            </article>
+
             <article class="product-card" data-product-id="catuai-amarillo">
               <a class="product-link" href="product.html?id=catuai-amarillo&img=images/node-21.png" aria-label="Ver Catuaí Amarillo">
                 <img src="images/node-21.png" alt="Catuaí Amarillo">
               </a>
               <h3>Catuaí Amarillo</h3>
-              <span class="price">Desde $300</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="zongolica">
-              <a class="product-link" href="product.html?id=zongolica&img=images/node-30.png" aria-label="Ver Zongolica">
-                <img src="images/node-30.png" alt="Zongolica">
-              </a>
-              <h3>Zongolica</h3>
-              <span class="price">Desde $320</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="cosautlan">
-              <a class="product-link" href="product.html?id=cosautlan&img=images/node-38.png" aria-label="Ver Cosautlán">
-                <img src="images/node-38.png" alt="Cosautlán">
-              </a>
-              <h3>Cosautlán</h3>
-              <span class="price">Desde $310</span>
+              <p class="product-card-meta">84.96 pts · Orgánico · Chocamán</p>
+              <span class="price">$580</span>
               <button class="add-to-cart" type="button">
                 <img src="images/icon-27.svg" alt="">
                 <span>Añade al carrito</span>
@@ -117,31 +113,8 @@
                 <img src="images/node-46.png" alt="Corahe">
               </a>
               <h3>Corahe</h3>
-              <span class="price">Desde $290</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="catuai-amarillo">
-              <a class="product-link" href="product.html?id=catuai-amarillo&img=images/node-59.png" aria-label="Ver Catuaí Amarillo">
-                <img src="images/node-59.png" alt="Catuaí Amarillo">
-              </a>
-              <h3>Catuaí Amarillo</h3>
-              <span class="price">Desde $300</span>
-              <button class="add-to-cart" type="button">
-                <img src="images/icon-27.svg" alt="">
-                <span>Añade al carrito</span>
-              </button>
-            </article>
-
-            <article class="product-card" data-product-id="zongolica">
-              <a class="product-link" href="product.html?id=zongolica&img=images/node-67.png" aria-label="Ver Zongolica">
-                <img src="images/node-67.png" alt="Zongolica">
-              </a>
-              <h3>Zongolica</h3>
-              <span class="price">Desde $320</span>
+              <p class="product-card-meta">84.22 pts · Natural + Honey · Totutla</p>
+              <span class="price">$520</span>
               <button class="add-to-cart" type="button">
                 <img src="images/icon-27.svg" alt="">
                 <span>Añade al carrito</span>
@@ -149,23 +122,28 @@
             </article>
 
             <article class="product-card" data-product-id="cosautlan">
-              <a class="product-link" href="product.html?id=cosautlan&img=images/node-75.png" aria-label="Ver Cosautlán">
-                <img src="images/node-75.png" alt="Cosautlán">
+              <a class="product-link" href="product.html?id=cosautlan&img=images/node-38.png" aria-label="Ver Cosautlán">
+                <img src="images/node-38.png" alt="Cosautlán">
               </a>
               <h3>Cosautlán</h3>
-              <span class="price">Desde $310</span>
+              <p class="product-card-meta">85 pts · Natural · Cosautlán de Carvajal</p>
+              <div class="product-card-pricing">
+                <span class="price price-old">$520</span>
+                <span class="price">$442</span>
+              </div>
               <button class="add-to-cart" type="button">
                 <img src="images/icon-27.svg" alt="">
                 <span>Añade al carrito</span>
               </button>
             </article>
 
-            <article class="product-card" data-product-id="corahe">
-              <a class="product-link" href="product.html?id=corahe&img=images/node-83.png" aria-label="Ver Corahe">
-                <img src="images/node-83.png" alt="Corahe">
+            <article class="product-card" data-product-id="zongolica">
+              <a class="product-link" href="product.html?id=zongolica&img=images/node-30.png" aria-label="Ver Zongolica">
+                <img src="images/node-30.png" alt="Zongolica">
               </a>
-              <h3>Corahe</h3>
-              <span class="price">Desde $290</span>
+              <h3>Zongolica</h3>
+              <p class="product-card-meta">82.5 pts · Lavado · Sierra de Zongolica</p>
+              <span class="price">$450</span>
               <button class="add-to-cart" type="button">
                 <img src="images/icon-27.svg" alt="">
                 <span>Añade al carrito</span>
@@ -178,15 +156,16 @@
         </div>
       </section>
 
-      <section class="split-section split-section--bordered split-section--corahe">
+      <section class="split-section split-section--bordered split-section--origin">
         <div class="container container-left split-inner">
           <div class="split-content">
-            <h2>CORAHE</h2>
-            <p>Descubre nuestra nueva selección de tostados Corahe, tiene notas de cacao y frutos rojos que lo hacen perfecto para los amantes del chocolate.</p>
-            <a class="button button-light" href="product.html?id=corahe&img=images/node-46.png">Compra</a>
+            <p class="section-eyebrow split-kicker">Lote destacado</p>
+            <h2>EL GUAYABAL</h2>
+            <p>Un gesha que une genética y terruño. Jazmín, té de limón y durazno conviven con el perfil de toronja y lima que hace célebre a Ixhuatlán del Café.</p>
+            <a class="button button-light" href="product.html?id=el-guayabal&img=images/node-96.png">Ver lote</a>
           </div>
-          <div class="split-media">
-            <img src="images/cold-brew-15.png" alt="Corahe">
+          <div class="split-media split-media--product">
+            <img src="images/node-96.png" alt="El Guayabal">
           </div>
         </div>
       </section>
@@ -194,47 +173,48 @@
       <section class="social-proof">
         <div class="container social-proof-inner">
           <div class="social-proof-copy">
-            <p class="eyebrow">Mas elegido</p>
-            <h2>El cafe que vuelve a comprarse.</h2>
-            <p>Notas limpias, tostado reciente y envio rapido. Mas de 1,200 resenas verificadas en Mexico.</p>
-            <div class="social-proof-rating" aria-label="Calificacion 4.8 de 5">
-              <div class="rating-score">4.8</div>
+            <p class="eyebrow">Desde Veracruz</p>
+            <h2>Compramos de frente al productor y tostamos por perfil.</h2>
+            <p>Exploramos más de 100 localidades en 12 municipios para construir una colección que hable con claridad del bosque mesófilo, la altura y la mano detrás de cada lote.</p>
+            <div class="social-proof-rating" aria-label="Mas de 100 localidades en 12 municipios">
+              <div class="rating-score">100+</div>
               <div class="rating-meta">
-                <div class="rating-stars" aria-hidden="true">★★★★★</div>
-                <span>Resenas reales</span>
+                <div class="rating-stars" aria-hidden="true">Veracruz</div>
+                <span>localidades recorridas en 12 municipios</span>
               </div>
             </div>
             <div class="social-proof-actions">
               <a class="button button-primary" href="catalogo.html">Comprar ahora</a>
-              <a class="button button-light" href="catalogo.html">Ver catalogo</a>
+              <a class="button button-light" href="nosotros.html">Nuestra historia</a>
             </div>
           </div>
           <div class="social-proof-panels">
             <div class="proof-card">
-              <h3>24-48h</h3>
-              <p>Envios rapidos con seguimiento.</p>
+              <h3>Comercio justo y directo</h3>
+              <p>Trabajamos hombro a hombro con productores locales para mantener calidad, trazabilidad y relaciones sostenibles.</p>
             </div>
             <div class="proof-card">
-              <h3>Tostado semanal</h3>
-              <p>Tu cafe llega con aroma intacto.</p>
+              <h3>Micro y nano lotes</h3>
+              <p>Co-producimos procesos experimentales orientados a competencias y perfiles sensoriales fuera de lo común.</p>
             </div>
             <div class="proof-card">
-              <h3>Molienda a tu metodo</h3>
-              <p>Ideal para prensa, V60 o espresso.</p>
+              <h3>Tueste por método</h3>
+              <p>Cada lote está pensado para funcionar tanto en Brew Bar como en Espresso sin perder su carácter de origen.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <section class="split-section split-section--photo split-section--coldbrew split-section--bordered" style="padding-bottom: 0;">
-        <div class="container container-left split-inner" style="margin-top: 0;">
+      <section class="split-section split-section--bordered split-section--sale">
+        <div class="container container-left split-inner">
           <div class="split-content">
-            <h2>COLD BREW</h2>
-            <p>Refrescante, suave y con notas dulces. Nuestro Cold Brew se prepara lento para lograr un perfil balanceado y versátil.</p>
-            <a class="button button-light" href="catalogo.html">Explora</a>
+            <p class="section-eyebrow split-kicker">Disponible ahora</p>
+            <h2>COSAUTLÁN</h2>
+            <p>Natural de secado lento en camas africanas con moras, arándanos, chocolate, caramelo y avellana. Un lote complejo, frutal y con una oferta especial activa.</p>
+            <a class="button button-light" href="product.html?id=cosautlan&img=images/node-38.png">Descubrir perfil</a>
           </div>
-          <div class="split-media">
-            <img src="images/cold-brew-6.png" alt="Cold Brew">
+          <div class="split-media split-media--product">
+            <img src="images/node-38.png" alt="Cosautlán">
           </div>
         </div>
       </section>
@@ -247,6 +227,8 @@
         </div>
         <nav class="footer-nav" aria-label="Secundario">
           <a href="catalogo.html">Catalogo</a>
+          <a href="nosotros.html">Nosotros</a>
+          <a href="sucursales.html">Sucursales</a>
           <a href="contacto.html">Contacto</a>
         </nav>
         <p class="footer-meta">© 2026 Impetus</p>
@@ -259,6 +241,7 @@
         <button class="quick-add-close" type="button" data-quick-add-close aria-label="Cerrar">×</button>
         <p class="quick-add-kicker">Añadir rápido</p>
         <h2 id="quick-add-title"></h2>
+        <p id="quick-add-copy" class="quick-add-copy"></p>
         <div class="quick-add-total">
           <p class="quick-add-total-label">Total</p>
           <div class="product-price-row quick-add-total-row">
@@ -267,22 +250,23 @@
         </div>
         <div class="quick-add-group">
           <div class="quick-add-group-header">
-            <span>Selecciona tu tamaño</span>
-            <button class="quick-add-help" type="button">¿Qué tamaño necesito?</button>
+            <span>Presentación</span>
           </div>
           <div class="quick-add-options" id="quick-add-size-options"></div>
         </div>
 
         <div class="quick-add-group">
           <div class="quick-add-group-header">
-            <span>Selecciona tu molienda</span>
-            <button class="quick-add-help" type="button">¿Qué molienda necesito?</button>
+            <span>Tueste</span>
           </div>
-          <div class="quick-add-options">
-            <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="whole">Grano entero</button>
-            <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="medium">Molienda media</button>
-            <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="fine">Molienda fina</button>
+          <div class="quick-add-options" id="quick-add-roast-options"></div>
+        </div>
+
+        <div class="quick-add-group">
+          <div class="quick-add-group-header">
+            <span>Molienda</span>
           </div>
+          <div class="quick-add-options" id="quick-add-grind-options"></div>
         </div>
 
         <div class="quick-add-qty-row">
@@ -297,7 +281,7 @@
           </div>
         </div>
 
-        <button class="button button-primary quick-add-submit" id="quick-add-submit" type="button" disabled>Selecciona opciones</button>
+        <button class="button button-primary quick-add-submit" id="quick-add-submit" type="button" disabled>Selecciona tueste y molienda</button>
         <p class="quick-add-footnote">Tu pedido se enviará en 24-48 horas.</p>
       </div>
     </div>
