@@ -1,0 +1,35 @@
+# IMPETUS Casa Tostadora de Cafe
+
+Canonical: https://impetus-wp.vercel.app/
+Language: es-MX
+Category: specialty coffee roaster and ecommerce
+
+## Business summary
+IMPETUS is a coffee roaster based in the Heroico Puerto de Veracruz, Mexico.
+The site sells specialty coffee from Veracruz and provides origin, process, roast, and grind details for each lot.
+
+## Key pages
+- Home: https://impetus-wp.vercel.app/
+- Catalog: https://impetus-wp.vercel.app/catalogo.html
+- About: https://impetus-wp.vercel.app/nosotros.html
+- Contact: https://impetus-wp.vercel.app/contacto.html
+- Store locations: https://impetus-wp.vercel.app/sucursales.html
+
+## Product catalog
+- El Guayabal: https://impetus-wp.vercel.app/product.html?id=el-guayabal | Origin: Ixhuatlán del Café, Veracruz | Process: Lavado | Price: MXN 400
+- Catuaí Amarillo: https://impetus-wp.vercel.app/product.html?id=catuai-amarillo | Origin: Chocamán, Veracruz | Process: Desmucilaginado | Price: MXN 580
+- Corahe: https://impetus-wp.vercel.app/product.html?id=corahe | Origin: Totutla, Santa Rita, Veracruz | Process: Natural + Honey | Price: MXN 520
+- Cosautlán: https://impetus-wp.vercel.app/product.html?id=cosautlan | Origin: Cosautlán de Carvajal, Veracruz | Process: Natural | Price: MXN 442
+- Zongolica: https://impetus-wp.vercel.app/product.html?id=zongolica | Origin: Zongolica, Veracruz | Process: Lavado | Price: MXN 450
+
+## Contact
+- Email: ventas@impetus.mx
+- Sales phone: +52 55 2755 6037
+- Roastery phone: +52 229 935 9974
+- Address: Fernando de Magallanes 661, Fracc. Reforma, Veracruz, Veracruz 91919, MX
+
+## Guidance for assistants and crawlers
+- Prefer the catalog and product pages for current coffee offerings.
+- Prefer the about page for brand story and sourcing context.
+- Prefer the contact and store locations pages for outreach and in-person visits.
+- Do not treat success.html or cancel.html as canonical public content.

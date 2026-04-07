@@ -76,6 +76,7 @@ const params = new URLSearchParams(window.location.search);
 const productId = params.get("id");
 const imageParam = params.get("img");
 const product = PRODUCTS.find((item) => item.id === productId) || PRODUCTS[0];
+const siteSeo = window.SiteSEO || null;
 const imageSrc =
   imageParam && imageParam.startsWith("images/") ? imageParam : product.image;
 const images =
@@ -102,6 +103,104 @@ const sizes =
 const minPrice = Math.min(...sizes.map((size) => size.price));
 const minSize = sizes.find((size) => size.price === minPrice) || sizes[0];
 
+const collapseWhitespace = (value) =>
+  String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const truncateText = (value, maxLength = 160) => {
+  const normalized = collapseWhitespace(value);
+
+  if (normalized.length <= maxLength) {
+    return normalized;
+  }
+
+  return `${normalized.slice(0, maxLength - 1).trim()}…`;
+};
+
+const productSeoTitle = `${product.name} | Cafe de especialidad de Veracruz | IMPETUS`;
+const productSeoDescription = truncateText(
+  product.summary || product.description || product.origin
+);
+
+const buildProductStructuredData = (priceValue) => {
+  if (!siteSeo) {
+    return null;
+  }
+
+  const productUrl = siteSeo.productUrl(product.id);
+  const imageUrls =
+    Array.isArray(product.images) && product.images.length
+      ? product.images.map((src) => siteSeo.absoluteUrl(src))
+      : [siteSeo.absoluteUrl(product.image)];
+
+  const additionalProperty = [
+    ["Origen", product.origin],
+    ["Proceso", product.process],
+    ["Fermentacion", product.fermentation],
+    ["Secado", product.drying],
+    ["Productor", product.producer],
+    ["Variedad", product.variety],
+    ["Localidad", product.locality],
+    ["Altitud", product.altitude],
+    ["Presentacion", product.presentation],
+  ]
+    .filter(([, value]) => Boolean(value))
+    .map(([name, value]) => ({
+      "@type": "PropertyValue",
+      name,
+      value,
+    }));
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": [
+      siteSeo.organization,
+      {
+        "@type": "Product",
+        name: product.name,
+        description: collapseWhitespace(product.summary || product.description),
+        image: imageUrls,
+        sku: product.id,
+        brand: {
+          "@type": "Brand",
+          name: "IMPETUS",
+        },
+        category: product.category || "Cafe de especialidad",
+        url: productUrl,
+        additionalProperty,
+        offers: {
+          "@type": "Offer",
+          url: productUrl,
+          priceCurrency: "MXN",
+          price: priceValue || product.priceValue || minPrice,
+          availability: "https://schema.org/InStock",
+          itemCondition: "https://schema.org/NewCondition",
+        },
+      },
+    ],
+  };
+};
+
+const updateProductSeo = (priceValue) => {
+  if (!siteSeo) {
+    return;
+  }
+
+  const productUrl = siteSeo.productUrl(product.id);
+  siteSeo.setPageMeta({
+    title: productSeoTitle,
+    description: productSeoDescription,
+    url: productUrl,
+    image: siteSeo.absoluteUrl(imageSrc),
+    type: "product",
+  });
+  siteSeo.setJsonLd(
+    "product-structured-data",
+    buildProductStructuredData(priceValue)
+  );
+};
+
 const getSelectedOption = (group) =>
   productConfig?.querySelector(
     `.quick-add-option.is-selected[data-option-group="${group}"]`
@@ -121,6 +220,8 @@ const updatePriceDisplay = (sizeSelected) => {
     productPerGram.textContent =
       grams > 0 ? `$${(selectedSizePrice / grams).toFixed(2)} / g` : "";
   }
+
+  updateProductSeo(selectedSizePrice);
 };
 
 const renderTextBlocks = (container, value) => {
@@ -208,6 +309,10 @@ if (breadcrumbProduct) {
 if (productImage) {
   productImage.src = imageSrc;
   productImage.alt = product.name;
+  productImage.width = product.imageWidth || 500;
+  productImage.height = product.imageHeight || 500;
+  productImage.decoding = "async";
+  productImage.fetchPriority = "high";
 }
 if (productDescription) {
   productDescription.textContent = product.summary || product.description;
@@ -262,6 +367,10 @@ if (productThumbs && productImage) {
     const img = document.createElement("img");
     img.src = src;
     img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.width = product.imageWidth || 500;
+    img.height = product.imageHeight || 500;
     button.appendChild(img);
 
     if (src === productImage.src) {

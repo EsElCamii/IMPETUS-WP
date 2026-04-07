@@ -7,6 +7,8 @@ const PRODUCTS = [
     priceId: "price_el_guayabal_250g",
     image: "images/el-guayabal.png",
     images: ["images/el-guayabal.png"],
+    imageWidth: 500,
+    imageHeight: 500,
     badge: "Gesha",
     summary:
       "Gesha floral y cítrico con jazmín, té de limón y durazno, marcado por el terruño de Ixhuatlán del Café.",
@@ -46,6 +48,8 @@ const PRODUCTS = [
     priceId: "price_catuai_amarillo_500g",
     image: "images/catuai-amarillo.png",
     images: ["images/catuai-amarillo.png"],
+    imageWidth: 430,
+    imageHeight: 546,
     badge: "Orgánico",
     summary:
       "Lote orgánico de cooperativa con perfil cítrico, dulce y herbal, pensado para clientes que valoran el origen y el impacto ambiental.",
@@ -85,6 +89,8 @@ const PRODUCTS = [
     priceId: "price_corahe_500g",
     image: "images/corahe.png",
     images: ["images/corahe.png"],
+    imageWidth: 500,
+    imageHeight: 500,
     badge: "Experimental",
     summary:
       "Proceso Natural + Honey intensamente vinoso, con frutas rojas, vino tinto y cacao fermentado.",
@@ -124,6 +130,8 @@ const PRODUCTS = [
     originalPrice: "$520",
     image: "images/cosautlan.png",
     images: ["images/cosautlan.png"],
+    imageWidth: 293,
+    imageHeight: 358,
     badge: "Oferta",
     summary:
       "Natural de secado lento en camas africanas con moras, arándanos, chocolate, caramelo y avellana.",
@@ -162,6 +170,8 @@ const PRODUCTS = [
     priceId: "price_zongolica_500g",
     image: "images/zongolica.png",
     images: ["images/zongolica.png"],
+    imageWidth: 500,
+    imageHeight: 500,
     badge: "Sierra",
     summary:
       "Perfil clásico de la sierra de Zongolica: cítrico, dulce y de cuerpo ligero.",
@@ -196,4 +206,8 @@ const PRODUCTS = [
 
 if (typeof window !== "undefined") {
   window.PRODUCTS = PRODUCTS;
+}
+
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = PRODUCTS;
 }

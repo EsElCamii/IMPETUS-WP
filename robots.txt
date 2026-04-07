@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://impetus-wp.vercel.app/sitemap.xml
