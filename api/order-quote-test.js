@@ -1,52 +1,13 @@
 const { calculateOrderWeightGrams } = require('./lib/catalog');
 const { createShippingQuoteDetailed } = require('./lib/skydropx');
 const { validateItems, validatePostalCode, createValidationError } = require('./lib/validation');
-
-const REQUIRED_ORIGIN_ENV_KEYS = [
-  'SKYDROPX_ORIGIN_NAME',
-  'SKYDROPX_ORIGIN_COMPANY',
-  'SKYDROPX_ORIGIN_PHONE',
-  'SKYDROPX_ORIGIN_EMAIL',
-  'SKYDROPX_ORIGIN_COUNTRY_CODE',
-  'SKYDROPX_ORIGIN_POSTAL_CODE',
-  'SKYDROPX_ORIGIN_STATE',
-  'SKYDROPX_ORIGIN_CITY',
-  'SKYDROPX_ORIGIN_COLONY',
-  'SKYDROPX_ORIGIN_STREET',
-  'SKYDROPX_ORIGIN_NUMBER',
-];
+const { getShippingOrigin } = require('./lib/shipping-origin');
 
 const DEFAULT_PARCEL = {
   length_cm: 28,
   width_cm: 20,
   height_cm: 12,
 };
-
-function getRequiredEnvVar(key) {
-  const value = typeof process.env[key] === 'string' ? process.env[key].trim() : '';
-  return value;
-}
-
-function getOriginFromEnv() {
-  const missing = REQUIRED_ORIGIN_ENV_KEYS.filter((key) => !getRequiredEnvVar(key));
-  if (missing.length > 0) {
-    throw new Error(`Skydropx origin config missing required env vars: ${missing.join(', ')}`);
-  }
-
-  return {
-    name: getRequiredEnvVar('SKYDROPX_ORIGIN_NAME'),
-    company: getRequiredEnvVar('SKYDROPX_ORIGIN_COMPANY'),
-    phone: getRequiredEnvVar('SKYDROPX_ORIGIN_PHONE'),
-    email: getRequiredEnvVar('SKYDROPX_ORIGIN_EMAIL'),
-    country_code: getRequiredEnvVar('SKYDROPX_ORIGIN_COUNTRY_CODE'),
-    postal_code: getRequiredEnvVar('SKYDROPX_ORIGIN_POSTAL_CODE'),
-    state: getRequiredEnvVar('SKYDROPX_ORIGIN_STATE'),
-    city: getRequiredEnvVar('SKYDROPX_ORIGIN_CITY'),
-    colony: getRequiredEnvVar('SKYDROPX_ORIGIN_COLONY'),
-    street: getRequiredEnvVar('SKYDROPX_ORIGIN_STREET'),
-    number: getRequiredEnvVar('SKYDROPX_ORIGIN_NUMBER'),
-  };
-}
 
 function normalizeShippingQuoteError(error) {
   const base = {
@@ -173,6 +134,10 @@ function pickEstimatedDays(value) {
     value?.eta_min,
     value?.eta_max,
     value?.eta_business_days,
+    value?.package_eta_days,
+    value?.package_delivery_days,
+    value?.package_eta,
+    value?.package_delivery_time,
     value?.transit_days,
     value?.business_days,
     value?.min_days,
@@ -208,6 +173,9 @@ function extractQuotationEntries(responseBody) {
     return responseBody;
   }
 
+  const packageDefaults = getPackageDefaults(responseBody);
+  const packageEntries = extractPackageRateEntries(responseBody);
+
   const candidates = [
     responseBody?.data,
     responseBody?.quotations,
@@ -221,14 +189,110 @@ function extractQuotationEntries(responseBody) {
     responseBody?.quotation,
   ];
 
+  const collected = [];
   for (const candidate of candidates) {
     const entries = toEntryArray(candidate);
     if (entries.length > 0) {
-      return entries;
+      collected.push(...entries.map((entry) => ({ ...packageDefaults, ...entry })));
     }
   }
 
+  if (packageEntries.length > 0) {
+    collected.push(...packageEntries);
+  }
+
+  if (collected.length > 0) {
+    return collected;
+  }
+
   return [];
+}
+
+function extractPackages(responseBody) {
+  const packageCandidates = [
+    responseBody?.packages,
+    responseBody?.data?.packages,
+    responseBody?.quotation_scope?.packages,
+  ];
+
+  const collected = [];
+  for (const candidate of packageCandidates) {
+    const entries = toEntryArray(candidate).filter((entry) => entry && typeof entry === 'object');
+    if (entries.length > 0) {
+      collected.push(...entries);
+    }
+  }
+
+  return collected;
+}
+
+function getPackageDefaults(responseBody) {
+  const packages = extractPackages(responseBody);
+  if (!packages.length) {
+    return {};
+  }
+
+  const pkg = packages[0];
+  const estimatedDays = pickEstimatedDays(pkg);
+
+  return {
+    package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+    package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+    package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+    package_eta_days: Number.isFinite(estimatedDays) ? estimatedDays : undefined,
+    package_eta_text:
+      pickText(pkg.estimated_delivery_text, pkg.estimated_delivery, pkg.delivery_time_text, pkg.delivery_time, pkg.eta) ||
+      undefined,
+    package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time, pkg.transit_time) || undefined,
+    package_delivery_days: pickText(pkg.delivery_days) || undefined,
+    package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+    package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+  };
+}
+
+function extractPackageRateEntries(responseBody) {
+  const packages = extractPackages(responseBody);
+  const entries = [];
+
+  for (const pkg of packages) {
+    const packageMeta = {
+      package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+      package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+      package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+      package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time, pkg.transit_time) || undefined,
+      package_eta_days: pickEstimatedDays(pkg) || undefined,
+      package_eta_text:
+        pickText(pkg.estimated_delivery_text, pkg.estimated_delivery, pkg.delivery_time_text, pkg.delivery_time, pkg.eta) ||
+        undefined,
+      package_delivery_days: pickText(pkg.delivery_days) || undefined,
+      package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+      package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+    };
+
+    const rateCandidates = [
+      pkg.rates,
+      pkg.quotations,
+      pkg.results,
+      pkg.items,
+      pkg.options,
+      pkg.services,
+      pkg.data?.rates,
+      pkg.data?.quotations,
+      pkg.data?.results,
+      pkg.quotation_scope?.rates,
+    ];
+
+    for (const candidate of rateCandidates) {
+      const rateEntries = toEntryArray(candidate);
+      if (rateEntries.length > 0) {
+        rateEntries.forEach((rate) => {
+          entries.push({ ...packageMeta, ...rate });
+        });
+      }
+    }
+  }
+
+  return entries;
 }
 
 function toEntryArray(candidate) {
@@ -314,6 +378,9 @@ function hasExpressIndicator(entry) {
     entry?.type,
     entry?.service_type,
     entry?.delivery_type,
+    entry?.package_type,
+    entry?.package_service_type,
+    entry?.package_delivery_type,
     entry?.service_level_name,
     entry?.service_name,
     entry?.service?.name,
@@ -337,6 +404,10 @@ function hasEtaIndicator(entry) {
     entry?.transit_time,
     entry?.eta_text,
     entry?.eta,
+    entry?.package_eta_text,
+    entry?.package_eta,
+    entry?.package_delivery_time,
+    entry?.package_delivery_promise,
     entry?.estimated_arrival,
     entry?.delivery_promise,
     entry?.promise,
@@ -366,6 +437,9 @@ function makeRawEntrySample(entries) {
       entry.type,
       entry.service_type,
       entry.delivery_type,
+      entry.package_type,
+      entry.package_service_type,
+      entry.package_delivery_type,
       entry.service_level_name,
       entry.service_name,
       entry.service?.name,
@@ -380,7 +454,10 @@ function makeRawEntrySample(entries) {
       entry.delivery_time,
       entry.transit_time,
       entry.eta_text,
-      entry.eta
+      entry.eta,
+      entry.package_eta_text,
+      entry.package_eta,
+      entry.package_delivery_time
     ) || null,
     top_keys: Object.keys(entry).slice(0, 30),
   }));
@@ -431,7 +508,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const origin = getOriginFromEnv();
+    const origin = getShippingOrigin();
     const postalCode = validatePostalCode(req.body?.postal_code);
     const items = validateItems(req.body?.items);
     const includeRaw = req.body?.include_raw === true;

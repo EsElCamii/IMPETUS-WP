@@ -2,6 +2,10 @@ const Stripe = require('stripe');
 const { validateCheckoutPayload } = require('./lib/validation');
 const { getQuoteSnapshot } = require('./lib/validation');
 const { getCatalogEntryByPriceId } = require('./lib/catalog');
+const {
+  normalizeCheckoutItems,
+  serializeCheckoutItems,
+} = require('./lib/checkout-items');
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2023-10-16',
@@ -26,6 +30,7 @@ module.exports = async function handler(req, res) {
     }
 
     const { items, quoteId, optionId } = validateCheckoutPayload(req.body || {});
+    const checkoutItems = normalizeCheckoutItems(req.body?.items, items);
     const snapshot = getQuoteSnapshot(quoteId) || getQuoteSnapshot(req.body?.quote_token);
 
     if (!snapshot) {
@@ -56,7 +61,15 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const productLineItems = items.map((item) => {
+    const serializedItems = serializeCheckoutItems(checkoutItems);
+    if (!serializedItems || serializedItems.length > 500) {
+      res.status(400).json({
+        error: 'El carrito tiene demasiadas configuraciones para procesar el checkout.',
+      });
+      return;
+    }
+
+    const productLineItems = checkoutItems.map((item) => {
       const catalogEntry = getCatalogEntryByPriceId(item.priceId);
       if (!catalogEntry) {
         throw new Error(`Catalog entry not found for priceId: ${item.priceId}`);
@@ -71,7 +84,9 @@ module.exports = async function handler(req, res) {
         price_data: {
           currency: 'mxn',
           product_data: {
-            name: `${catalogEntry.productName} ${catalogEntry.size}`,
+            name: item.roast
+              ? `${catalogEntry.productName} ${catalogEntry.size} · ${item.roast}`
+              : `${catalogEntry.productName} ${catalogEntry.size}`,
           },
           unit_amount: unitAmountCents,
         },
@@ -105,7 +120,7 @@ module.exports = async function handler(req, res) {
       shipping_service: String(shippingOption.service).slice(0, 500),
       shipping_price: String(shippingOption.price_mxn),
       destination_postal_code: String(snapshot.postal_code || '').slice(0, 500),
-      items: JSON.stringify(items).slice(0, 500),
+      items: serializedItems,
     };
 
     const publicBaseUrl = process.env.PUBLIC_BASE_URL;

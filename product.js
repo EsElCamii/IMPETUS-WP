@@ -14,131 +14,243 @@ const productAddButton = document.getElementById("product-add");
 const productPriceEl = document.getElementById("product-price");
 const productPerGram = document.getElementById("product-per-gram");
 const productSizeOptions = document.getElementById("product-size-options");
+const productRoastOptions = document.getElementById("product-roast-options");
+const productGrindOptions = document.getElementById("product-grind-options");
+const productStory = document.getElementById("product-story");
+const productFacts = document.getElementById("product-facts");
 let selectedSizePrice = null;
 let selectedSizePriceId = null;
+
+const slugifyOption = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const buildOptionButton = ({ group, label, caption = "", price, grams, priceId }) => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "quick-add-option";
+  button.dataset.optionGroup = group;
+  button.dataset.optionValue = slugifyOption(label);
+  button.dataset.label = label;
+
+  if (typeof price === "number" && !Number.isNaN(price)) {
+    button.dataset.price = String(price);
+  }
+  if (typeof grams === "number" && !Number.isNaN(grams)) {
+    button.dataset.grams = String(grams);
+  }
+  if (priceId) {
+    button.dataset.priceId = priceId;
+  }
+
+  const title = document.createElement("span");
+  title.className = "option-label";
+  title.textContent = label;
+  button.appendChild(title);
+
+  if (caption) {
+    const meta = document.createElement("span");
+    meta.className = "option-caption";
+    meta.textContent = caption;
+    button.appendChild(meta);
+  }
+
+  return button;
+};
+
+const renderOptions = (container, buttons) => {
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = "";
+  container.classList.toggle("quick-add-options--single", buttons.length === 1);
+  buttons.forEach((button) => container.appendChild(button));
+};
 
 const params = new URLSearchParams(window.location.search);
 const productId = params.get("id");
 const imageParam = params.get("img");
-
 const product = PRODUCTS.find((item) => item.id === productId) || PRODUCTS[0];
-const imageSrc = imageParam && imageParam.startsWith("images/") ? imageParam : product.image;
-const images = Array.isArray(product.images) && product.images.length ? [...product.images] : [product.image];
+const imageSrc =
+  imageParam && imageParam.startsWith("images/") ? imageParam : product.image;
+const images =
+  Array.isArray(product.images) && product.images.length
+    ? [...product.images]
+    : [product.image];
 
 if (imageSrc && !images.includes(imageSrc)) {
   images.unshift(imageSrc);
 }
 
+const sizes =
+  Array.isArray(product.sizes) && product.sizes.length
+    ? product.sizes
+    : [
+        {
+          label: product.presentation || "250 gr.",
+          grams: product.weight ? Number.parseInt(product.weight, 10) || 250 : 250,
+          price: product.priceValue || 0,
+          priceId: product.priceId || "",
+        },
+      ];
 
-productName.textContent = product.name;
-const sizes = Array.isArray(product.sizes) && product.sizes.length
-  ? product.sizes
-  : [
-      { label: "250g", grams: 250, price: product.priceValue || 0 },
-      { label: "500g", grams: 500, price: product.priceValue || 0 },
-      { label: "1kg", grams: 1000, price: product.priceValue || 0 },
-    ];
 const minPrice = Math.min(...sizes.map((size) => size.price));
-const minSize = sizes.reduce(
-  (current, size) => (size.price === minPrice ? size : current),
-  sizes[0]
-);
+const minSize = sizes.find((size) => size.price === minPrice) || sizes[0];
 
-if (productPriceEl) {
-  productPriceEl.textContent = `$${minPrice}`;
-}
-if (productPerGram && minPrice > 0) {
-  const grams = minSize?.grams || 0;
-  if (grams > 0) {
-    productPerGram.textContent = `$${(minPrice / grams).toFixed(2)} / g`;
+const getSelectedOption = (group) =>
+  productConfig?.querySelector(
+    `.quick-add-option.is-selected[data-option-group="${group}"]`
+  ) || null;
+
+const updatePriceDisplay = (sizeSelected) => {
+  const activeSize = sizeSelected || minSize;
+  selectedSizePrice = activeSize?.price || product.priceValue;
+  selectedSizePriceId = activeSize?.priceId || product.priceId;
+
+  if (productPriceEl) {
+    productPriceEl.textContent = `$${selectedSizePrice}`;
   }
-}
-breadcrumbProduct.textContent = product.name;
-productImage.src = imageSrc;
-productImage.alt = product.name;
-productDescription.textContent = product.description;
-productMeta.textContent = `${product.origin} · ${product.notes} · ${product.weight}`;
+
+  if (productPerGram) {
+    const grams = activeSize?.grams || 0;
+    productPerGram.textContent =
+      grams > 0 ? `$${(selectedSizePrice / grams).toFixed(2)} / g` : "";
+  }
+};
+
+const renderTextBlocks = (container, value) => {
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = "";
+  String(value || "")
+    .split("\n\n")
+    .filter(Boolean)
+    .forEach((paragraph) => {
+      const p = document.createElement("p");
+      p.textContent = paragraph.trim();
+      container.appendChild(p);
+    });
+};
+
+const renderFacts = () => {
+  if (!productFacts) {
+    return;
+  }
+
+  const facts = [
+    ["Puntuación de taza", `${product.cupScore} pts`],
+    ["Proceso", product.process],
+    ["Fermentación", product.fermentation],
+    ["Secado", product.drying],
+    ["Productor", product.producer],
+    ["Variedad", product.variety],
+    ["Localidad", product.locality],
+    ["Finca", product.farm],
+    ["Altitud", product.altitude],
+    ["Categoría", product.category],
+    ["Tuestes disponibles", (product.roastOptions || []).join(" · ")],
+  ].filter(([, value]) => Boolean(value));
+
+  productFacts.innerHTML = "";
+  facts.forEach(([label, value]) => {
+    const item = document.createElement("div");
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = value;
+    item.appendChild(dt);
+    item.appendChild(dd);
+    productFacts.appendChild(item);
+  });
+};
 
 const renderSizeOptions = () => {
-  if (!productSizeOptions) {
-    return;
-  }
-  productSizeOptions.innerHTML = "";
-  sizes.forEach((size) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "quick-add-option";
-    button.dataset.optionGroup = "size";
-    button.dataset.optionValue = size.label;
-    button.dataset.price = String(size.price);
-    button.dataset.grams = String(size.grams);
-    if (size.priceId) {
-      button.dataset.priceId = size.priceId;
-    }
-
-    const delta = size.price - minPrice;
-    const deltaText =
-      delta > 0
-        ? `<span class="delta-plus">+</span>$${delta}`
-        : `$${size.price}`;
-
-    button.innerHTML = `
-      <span class="option-label">${size.label}</span>
-      <span class="option-delta">${deltaText}</span>
-    `;
-
-    productSizeOptions.appendChild(button);
-  });
+  renderOptions(
+    productSizeOptions,
+    sizes.map((size) =>
+      buildOptionButton({
+        group: "size",
+        label: size.label,
+        caption: `$${size.price}`,
+        price: size.price,
+        grams: size.grams,
+        priceId: size.priceId,
+      })
+    )
+  );
 };
 
+const renderTextOptions = (container, values, group) => {
+  renderOptions(
+    container,
+    (Array.isArray(values) ? values : []).map((value) =>
+      buildOptionButton({
+        group,
+        label: value,
+      })
+    )
+  );
+};
+
+if (productName) {
+  productName.textContent = product.name;
+}
+if (breadcrumbProduct) {
+  breadcrumbProduct.textContent = product.name;
+}
+if (productImage) {
+  productImage.src = imageSrc;
+  productImage.alt = product.name;
+}
+if (productDescription) {
+  productDescription.textContent = product.summary || product.description;
+}
+if (productMeta) {
+  productMeta.textContent = `${product.origin} · ${product.presentation} · ${product.cupScore} pts`;
+}
+if (productOldPrice) {
+  if (product.originalPrice) {
+    productOldPrice.textContent = product.originalPrice;
+    productOldPrice.style.display = "";
+  } else {
+    productOldPrice.style.display = "none";
+  }
+}
+if (productBadge) {
+  if (product.badge) {
+    productBadge.textContent = product.badge;
+    productBadge.style.display = "";
+  } else {
+    productBadge.style.display = "none";
+  }
+}
+
+updatePriceDisplay(minSize);
 renderSizeOptions();
+renderTextOptions(productRoastOptions, product.roastOptions, "roast");
+renderTextOptions(productGrindOptions, product.grindOptions, "grind");
+renderTextBlocks(productStory, product.description);
+renderFacts();
 
-const setDefaultSelections = () => {
-  if (!productConfig) {
-    return;
-  }
-
-  const defaultSize =
-    productConfig.querySelector('.quick-add-option[data-option-group="size"][data-option-value="500g"]') ||
-    productConfig.querySelector('.quick-add-option[data-option-group="size"]');
-  if (defaultSize) {
-    defaultSize.classList.add("is-selected");
-  }
-
-  const defaultGrind =
-    productConfig.querySelector('.quick-add-option[data-option-group="grind"][data-option-value="whole"]') ||
-    productConfig.querySelector('.quick-add-option[data-option-group="grind"]');
-  if (defaultGrind) {
-    defaultGrind.classList.add("is-selected");
-  }
-};
-
-setDefaultSelections();
-
-if (product.originalPrice) {
-  productOldPrice.textContent = product.originalPrice;
-} else {
-  productOldPrice.style.display = "none";
-}
-
-if (product.badge) {
-  productBadge.textContent = product.badge;
-} else {
-  productBadge.style.display = "none";
-}
-
-if (Array.isArray(product.features) && product.features.length > 0) {
+if (Array.isArray(product.tastingNotes) && product.tastingNotes.length > 0 && productFeatures) {
   productFeatures.innerHTML = "";
-  product.features.forEach((feature) => {
+  product.tastingNotes.forEach((note) => {
     const item = document.createElement("li");
-    item.textContent = feature;
+    item.textContent = note;
     productFeatures.appendChild(item);
   });
-} else {
+} else if (productFeatures) {
   productFeatures.style.display = "none";
 }
 
-if (productThumbs) {
+if (productThumbs && productImage) {
   productThumbs.innerHTML = "";
   images.forEach((src, index) => {
     const button = document.createElement("button");
@@ -168,29 +280,32 @@ if (productThumbs) {
 }
 
 if (productConfig) {
+  const defaultSize = productConfig.querySelector(
+    '.quick-add-option[data-option-group="size"]'
+  );
+  if (defaultSize) {
+    defaultSize.classList.add("is-selected");
+  }
+
   const updateProductAddState = () => {
-    const sizeSelected = productConfig.querySelector(
-      '.quick-add-option.is-selected[data-option-group="size"]'
-    );
-    const grindSelected = productConfig.querySelector(
-      '.quick-add-option.is-selected[data-option-group="grind"]'
-    );
+    const sizeSelected = getSelectedOption("size");
+    const roastSelected = getSelectedOption("roast");
+    const grindSelected = getSelectedOption("grind");
+
     if (productAddButton) {
-      productAddButton.disabled = !(sizeSelected && grindSelected);
+      const ready = Boolean(sizeSelected && roastSelected && grindSelected);
+      productAddButton.disabled = !ready;
+      productAddButton.textContent = ready
+        ? "Añade al carrito"
+        : "Selecciona tueste y molienda";
     }
+
     if (sizeSelected) {
-      const priceValue = Number(sizeSelected.dataset.price);
-      selectedSizePrice = Number.isNaN(priceValue) ? null : priceValue;
-      selectedSizePriceId = sizeSelected.dataset.priceId || null;
-      if (productPriceEl && selectedSizePrice) {
-        productPriceEl.textContent = `$${selectedSizePrice}`;
-      }
-      if (productPerGram && selectedSizePrice) {
-        const grams = Number(sizeSelected.dataset.grams) || 0;
-        if (grams > 0) {
-          productPerGram.textContent = `$${(selectedSizePrice / grams).toFixed(2)} / g`;
-        }
-      }
+      updatePriceDisplay({
+        price: Number(sizeSelected.dataset.price) || product.priceValue,
+        priceId: sizeSelected.dataset.priceId || product.priceId,
+        grams: Number(sizeSelected.dataset.grams) || minSize?.grams || 0,
+      });
     }
   };
 
@@ -198,7 +313,7 @@ if (productConfig) {
     option.addEventListener("click", () => {
       const group = option.dataset.optionGroup;
       productConfig
-        .querySelectorAll(`.quick-add-option[data-option-group=\"${group}\"]`)
+        .querySelectorAll(`.quick-add-option[data-option-group="${group}"]`)
         .forEach((item) => item.classList.remove("is-selected"));
       option.classList.add("is-selected");
       updateProductAddState();
@@ -212,8 +327,7 @@ if (productConfig) {
       }
       const delta = Number(button.dataset.qtyChange) || 0;
       const current = Number(productQty.textContent) || 1;
-      const next = Math.max(1, current + delta);
-      productQty.textContent = String(next);
+      productQty.textContent = String(Math.max(1, current + delta));
     });
   });
 
@@ -225,13 +339,12 @@ if (productAddButton) {
     if (!productConfig || productAddButton.disabled) {
       return;
     }
-    const sizeSelected = productConfig.querySelector(
-      '.quick-add-option.is-selected[data-option-group="size"]'
-    );
-    const grindSelected = productConfig.querySelector(
-      '.quick-add-option.is-selected[data-option-group="grind"]'
-    );
+
+    const sizeSelected = getSelectedOption("size");
+    const roastSelected = getSelectedOption("roast");
+    const grindSelected = getSelectedOption("grind");
     const qty = Number(productQty?.textContent) || 1;
+    const presentation = sizeSelected?.dataset.label || product.presentation || "";
 
     window.Cart?.addItem({
       id: product.id,
@@ -239,9 +352,11 @@ if (productAddButton) {
       price: product.price,
       priceValue: selectedSizePrice || product.priceValue,
       priceId: selectedSizePriceId || product.priceId,
-      image: productImage.src,
-      size: sizeSelected?.dataset.optionValue || "",
-      grind: grindSelected?.textContent.trim() || "",
+      image: productImage?.src || product.image,
+      size: presentation,
+      presentation,
+      roast: roastSelected?.dataset.label || roastSelected?.textContent.trim() || "",
+      grind: grindSelected?.dataset.label || grindSelected?.textContent.trim() || "",
       qty,
     });
 

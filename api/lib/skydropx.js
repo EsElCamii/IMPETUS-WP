@@ -80,21 +80,27 @@ async function getSkydropxToken(forceRefresh = false) {
   return requestToken();
 }
 
-async function skydropxRequest(path, payload, attempt = 0) {
+async function skydropxRequest(path, payload, attempt = 0, method = 'POST') {
   const token = await getSkydropxToken(attempt > 0);
   const requestUrl = `${SKYDROPX_API_BASE}${path}`;
+  const resolvedMethod = String(method || 'POST').toUpperCase();
+  const headers = {
+    Authorization: `Bearer ${token}`,
+  };
+  const requestInit = {
+    method: resolvedMethod,
+    headers,
+  };
 
-  const response = await fetch(requestUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify(payload),
-  });
+  if (resolvedMethod !== 'GET') {
+    headers['Content-Type'] = 'application/json';
+    requestInit.body = JSON.stringify(payload || {});
+  }
+
+  const response = await fetch(requestUrl, requestInit);
 
   if (response.status === 401 && attempt === 0) {
-    return skydropxRequest(path, payload, 1);
+    return skydropxRequest(path, payload, 1, resolvedMethod);
   }
 
   const json = await safeReadJson(response);
@@ -320,6 +326,10 @@ function pickEstimatedDays(value) {
     value.eta_min,
     value.eta_max,
     value.eta_business_days,
+    value.package_eta_days,
+    value.package_delivery_days,
+    value.package_eta,
+    value.package_delivery_time,
     value.transit_days,
     value.business_days,
     value.min_days,
@@ -404,6 +414,10 @@ function pickEstimatedText(value) {
     value.delivery_promise,
     value.promise,
     value.schedule,
+    value.package_eta_text,
+    value.package_eta,
+    value.package_delivery_time,
+    value.package_delivery_promise,
     value.service_level?.delivery_time,
     value.service_level?.estimated_delivery,
     value.service_level?.eta
@@ -481,6 +495,9 @@ function normalizeQuotationEntry(value) {
     { source: 'product', value: value.product },
     { source: 'name', value: value.name },
     { source: 'service_code', value: value.service_code },
+    { source: 'package_type', value: value.package_type },
+    { source: 'package_service_type', value: value.package_service_type },
+    { source: 'package_delivery_type', value: value.package_delivery_type },
     { source: 'service', value: value.service },
   ]);
 
@@ -665,6 +682,9 @@ function extractQuotationEntries(responseBody) {
     return responseBody;
   }
 
+  const packageDefaults = getPackageDefaults(responseBody);
+  const packageEntries = extractPackageRateEntries(responseBody);
+
   const candidates = [
     responseBody?.data,
     responseBody?.quotations,
@@ -678,14 +698,107 @@ function extractQuotationEntries(responseBody) {
     responseBody?.quotation,
   ];
 
+  const collected = [];
   for (const candidate of candidates) {
     const entries = toEntryArray(candidate);
     if (entries.length > 0) {
-      return entries;
+      collected.push(...entries.map((entry) => ({ ...packageDefaults, ...entry })));
     }
   }
 
+  if (packageEntries.length > 0) {
+    collected.push(...packageEntries);
+  }
+
+  if (collected.length > 0) {
+    return collected;
+  }
+
   return [];
+}
+
+function getPackageDefaults(responseBody) {
+  const packages = extractPackages(responseBody);
+  if (!packages.length) {
+    return {};
+  }
+
+  const pkg = packages[0];
+  const estimatedDays = pickEstimatedDays(pkg);
+  const estimatedText = pickEstimatedText(pkg);
+
+  return {
+    package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+    package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+    package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+    package_eta_days: Number.isFinite(estimatedDays) ? estimatedDays : undefined,
+    package_eta_text: estimatedText || undefined,
+    package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time) || undefined,
+    package_delivery_days: pickText(pkg.delivery_days) || undefined,
+    package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+    package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+  };
+}
+
+function extractPackageRateEntries(responseBody) {
+  const packages = extractPackages(responseBody);
+  const entries = [];
+
+  for (const pkg of packages) {
+    const packageMeta = {
+      package_type: pickText(pkg.type, pkg.package_type, pkg.name) || undefined,
+      package_service_type: pickText(pkg.service_type, pkg.service?.type) || undefined,
+      package_delivery_type: pickText(pkg.delivery_type, pkg.delivery?.type) || undefined,
+      package_eta: pickText(pkg.eta, pkg.estimated_delivery, pkg.delivery_time, pkg.transit_time) || undefined,
+      package_eta_days: pickEstimatedDays(pkg) || undefined,
+      package_eta_text: pickEstimatedText(pkg) || undefined,
+      package_delivery_days: pickText(pkg.delivery_days) || undefined,
+      package_delivery_time: pickText(pkg.delivery_time, pkg.transit_time) || undefined,
+      package_delivery_promise: pickText(pkg.delivery_promise, pkg.promise) || undefined,
+    };
+
+    const rateCandidates = [
+      pkg.rates,
+      pkg.quotations,
+      pkg.results,
+      pkg.items,
+      pkg.options,
+      pkg.services,
+      pkg.data?.rates,
+      pkg.data?.quotations,
+      pkg.data?.results,
+      pkg.quotation_scope?.rates,
+    ];
+
+    for (const candidate of rateCandidates) {
+      const rateEntries = toEntryArray(candidate);
+      if (rateEntries.length > 0) {
+        rateEntries.forEach((rate) => {
+          entries.push({ ...packageMeta, ...rate });
+        });
+      }
+    }
+  }
+
+  return entries;
+}
+
+function extractPackages(responseBody) {
+  const packageCandidates = [
+    responseBody?.packages,
+    responseBody?.data?.packages,
+    responseBody?.quotation_scope?.packages,
+  ];
+
+  const collected = [];
+  for (const candidate of packageCandidates) {
+    const entries = toEntryArray(candidate).filter((entry) => entry && typeof entry === 'object');
+    if (entries.length > 0) {
+      collected.push(...entries);
+    }
+  }
+
+  return collected;
 }
 
 function toEntryArray(candidate) {
@@ -842,6 +955,82 @@ function minOptionPrice(optionList) {
   return Math.min(...prices);
 }
 
+function hasServiceMetadata(option) {
+  const normalizedService = normalizeLabelForKey(option?.service);
+  return Boolean(normalizedService && !isGenericServiceLabel(normalizedService));
+}
+
+function hasEtaMetadata(option) {
+  const days = Number(option?.estimated_days);
+  const hasDays = Number.isFinite(days) && days > 0;
+  const hasText = Boolean(String(option?.estimated_text || '').trim());
+  return hasDays || hasText;
+}
+
+function optionMetadataScore(optionList) {
+  const options = Array.isArray(optionList) ? optionList : [];
+  let score = 0;
+
+  for (const option of options) {
+    if (hasServiceMetadata(option)) {
+      score += 1;
+    }
+    if (hasEtaMetadata(option)) {
+      score += 1;
+    }
+  }
+
+  return score;
+}
+
+function pickQuotationIdFromResponse(responseBody) {
+  return String(
+    responseBody?.id ||
+      responseBody?.quotation_id ||
+      responseBody?.quote_id ||
+      responseBody?.quotation_scope?.id ||
+      ''
+  ).trim();
+}
+
+function shouldFetchQuotationDetails(quotationId, options) {
+  if (!quotationId) {
+    return false;
+  }
+
+  const optionList = Array.isArray(options) ? options : [];
+  if (!optionList.length) {
+    return false;
+  }
+
+  const missingServiceForAll = optionList.every((option) => !hasServiceMetadata(option));
+  const missingEtaForAll = optionList.every((option) => !hasEtaMetadata(option));
+  return missingServiceForAll || missingEtaForAll;
+}
+
+function isDetailsResponseBetter(initialOptions, detailedOptions) {
+  const initial = Array.isArray(initialOptions) ? initialOptions : [];
+  const detailed = Array.isArray(detailedOptions) ? detailedOptions : [];
+  if (!detailed.length) {
+    return false;
+  }
+
+  if (detailed.length !== initial.length) {
+    return detailed.length > initial.length;
+  }
+
+  return optionMetadataScore(detailed) > optionMetadataScore(initial);
+}
+
+async function fetchQuotationDetails(quotationId) {
+  if (!quotationId) {
+    return null;
+  }
+
+  const encodedId = encodeURIComponent(quotationId);
+  return skydropxRequest(`/api/v1/quotations/${encodedId}`, null, 0, 'GET');
+}
+
 function isBetterQuoteResult(candidate, currentBest) {
   if (!currentBest) {
     return true;
@@ -857,6 +1046,12 @@ function isBetterQuoteResult(candidate, currentBest) {
   const currentStrict = Number(currentBest?.strict_count || 0);
   if (candidateStrict !== currentStrict) {
     return candidateStrict > currentStrict;
+  }
+
+  const candidateMetadataScore = optionMetadataScore(candidate?.options);
+  const currentMetadataScore = optionMetadataScore(currentBest?.options);
+  if (candidateMetadataScore !== currentMetadataScore) {
+    return candidateMetadataScore > currentMetadataScore;
   }
 
   const candidateMinPrice = minOptionPrice(candidate?.options);
@@ -880,7 +1075,23 @@ async function createShippingQuoteDetailed(payload) {
     try {
       for (let emptyAttempt = 0; emptyAttempt <= EMPTY_RESPONSE_RETRY_DELAYS_MS.length; emptyAttempt += 1) {
         const result = await skydropxRequest('/api/v1/quotations', candidate);
-        const normalized = normalizeQuotationsResponse(result);
+        let selectedResponse = result;
+        let normalized = normalizeQuotationsResponse(result);
+
+        const quotationId = pickQuotationIdFromResponse(result);
+        if (shouldFetchQuotationDetails(quotationId, normalized.options)) {
+          try {
+            const detailedResponse = await fetchQuotationDetails(quotationId);
+            const detailedNormalized = normalizeQuotationsResponse(detailedResponse);
+            if (isDetailsResponseBetter(normalized.options, detailedNormalized.options)) {
+              selectedResponse = detailedResponse;
+              normalized = detailedNormalized;
+            }
+          } catch (detailsError) {
+            // Best-effort enrichment. Keep the original normalized response on detail request failures.
+          }
+        }
+
         const options = normalized.options;
         const quoteDetails = {
           options,
@@ -889,7 +1100,7 @@ async function createShippingQuoteDetailed(payload) {
           source_count: normalized.source_count,
           normalized_count: options.length,
           candidate_index: i,
-          raw_response: result,
+          raw_response: selectedResponse,
         };
 
         if (isBetterQuoteResult(quoteDetails, bestCandidateResult)) {

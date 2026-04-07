@@ -21,7 +21,9 @@
 
         <div class="nav-group">
           <nav class="main-nav" aria-label="Principal">
-            <a href="catalogo.html">Catalogo</a>
+            <a href="catalogo.html" aria-current="page">Catalogo</a>
+            <a href="nosotros.html">Nosotros</a>
+            <a href="sucursales.html">Sucursales</a>
             <a href="contacto.html">Contacto</a>
           </nav>
 
@@ -44,7 +46,7 @@
               <img src="images/vector-163.svg" class="cart-dot cart-dot-left" alt="">
               <img src="images/vector-164.svg" class="cart-dot cart-dot-right" alt="">
             </span>
-            <span class="cart-count">2</span>
+            <span class="cart-count">0</span>
           </button>
         </div>
       </div>
@@ -65,6 +67,7 @@
               <span aria-hidden="true">›</span>
               <span id="breadcrumb-product"></span>
             </nav>
+            <p class="section-eyebrow">Origen Veracruz</p>
             <h1 id="product-name"></h1>
             <div class="product-price-row">
               <span id="product-old-price" class="product-old-price"></span>
@@ -72,26 +75,34 @@
               <span id="product-badge" class="product-badge"></span>
             </div>
             <p id="product-per-gram" class="product-per-gram"></p>
+            <p id="product-meta" class="product-meta"></p>
             <p id="product-description" class="product-description"></p>
+
+            <div class="product-taste">
+              <p class="product-section-label">Perfil sensorial</p>
+              <ul id="product-features" class="product-features"></ul>
+            </div>
+
             <div class="product-config">
               <div class="quick-add-group">
                 <div class="quick-add-group-header">
-                  <span>Selecciona tu tamaño</span>
-                  <button class="quick-add-help" type="button">¿Qué tamaño necesito?</button>
+                  <span>Presentación</span>
                 </div>
                 <div class="quick-add-options" id="product-size-options"></div>
               </div>
 
               <div class="quick-add-group">
                 <div class="quick-add-group-header">
-                  <span>Selecciona tu molienda</span>
-                  <button class="quick-add-help" type="button">¿Qué molienda necesito?</button>
+                  <span>Tueste</span>
                 </div>
-                <div class="quick-add-options">
-                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="whole">Grano entero</button>
-                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="medium">Molienda media</button>
-                  <button class="quick-add-option" type="button" data-option-group="grind" data-option-value="fine">Molienda fina</button>
+                <div class="quick-add-options" id="product-roast-options"></div>
+              </div>
+
+              <div class="quick-add-group">
+                <div class="quick-add-group-header">
+                  <span>Molienda</span>
                 </div>
+                <div class="quick-add-options" id="product-grind-options"></div>
               </div>
 
               <div class="quick-add-qty-row">
@@ -106,15 +117,40 @@
                 </div>
               </div>
             </div>
-            <ul id="product-features" class="product-features"></ul>
-            <p id="product-meta" class="product-meta"></p>
+
             <div class="product-actions">
-              <button class="button button-primary" id="product-add" type="button" disabled>Añade al carrito</button>
+              <button class="button button-primary" id="product-add" type="button" disabled>Selecciona tueste y molienda</button>
             </div>
           </div>
         </div>
       </section>
+
+      <section class="product-story-section">
+        <div class="container product-story-inner">
+          <div class="product-story-copy">
+            <p class="section-eyebrow">Historia del lote</p>
+            <h2>Lo que hace especial a este café.</h2>
+            <div id="product-story"></div>
+          </div>
+          <dl id="product-facts" class="product-facts"></dl>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <div class="container footer-inner">
+        <div class="footer-brand">
+          <img src="images/image-3-145.png" class="footer-logo" alt="Impetus">
+        </div>
+        <nav class="footer-nav" aria-label="Secundario">
+          <a href="catalogo.html">Catalogo</a>
+          <a href="nosotros.html">Nosotros</a>
+          <a href="sucursales.html">Sucursales</a>
+          <a href="contacto.html">Contacto</a>
+        </nav>
+        <p class="footer-meta">© 2026 Impetus</p>
+      </div>
+    </footer>
   </div>
 
   <div class="cart-drawer" id="cart-drawer" aria-hidden="true">
