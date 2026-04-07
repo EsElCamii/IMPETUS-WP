@@ -1928,36 +1928,60 @@ button {
 }
 
 .product-link {
-  min-height: 270px;
   display: grid;
   place-items: center;
   border-radius: 18px;
-  padding: 12px;
-  background: linear-gradient(180deg, #faf6ed 0%, #e9dfca 100%);
 }
 
-.product-link img {
-  max-height: 282px;
-  max-width: 84%;
-  width: auto;
+/* Coffee card image tuning lives here so the whole catalog can be adjusted in one place. */
+.product-card--coffee {
+  --coffee-card-height: 336px;
+  --coffee-card-padding: 8px;
+  --coffee-image-width: 88%;
+  --coffee-image-height: 100%;
+  --coffee-image-scale: 1.12;
+  --coffee-image-y: 0px;
+  --coffee-card-surface: linear-gradient(180deg, #f7f1e6 0%, #ebe0ce 100%);
+}
+
+.product-card--coffee .product-link {
+  height: var(--coffee-card-height);
+  padding: var(--coffee-card-padding);
+  overflow: hidden;
+  background: var(--coffee-card-surface);
+}
+
+.product-card--coffee .product-link img {
+  width: var(--coffee-image-width);
+  height: var(--coffee-image-height);
+  max-width: none;
+  max-height: none;
   object-fit: contain;
   object-position: center center;
+  transform: translateY(var(--coffee-image-y)) scale(var(--coffee-image-scale));
   transform-origin: center center;
   transition: transform 0.22s ease;
 }
 
-.product-card[data-product-id="el-guayabal"] .product-link img,
-.product-card[data-product-id="corahe"] .product-link img,
-.product-card[data-product-id="zongolica"] .product-link img {
-  transform: scale(1.22);
+/* Per-coffee tuning to visually align the smaller bags with the Catuaí baseline. */
+.product-card--coffee[data-product-id="el-guayabal"] {
+  --coffee-image-scale: 1.60;
+  --coffee-image-y: 30px;
 }
 
-.product-card[data-product-id="cosautlan"] .product-link img {
-  transform: scale(1.08);
+.product-card--coffee[data-product-id="corahe"] {
+  --coffee-image-scale: 2.4;
+  --coffee-image-y: -5px;
 }
 
-.product-card[data-product-id="catuai-amarillo"] .product-link img {
-  transform: scale(1.02);
+.product-card--coffee[data-product-id="cosautlan"] {
+  --coffee-image-scale: 1.5;
+  --coffee-image-y: 4px;
+}
+
+.product-card--coffee[data-product-id="zongolica"] {
+  --coffee-image-scale: 2.5;
+  --coffee-image-y: 0px;
 }
 
 .product-card-meta {
@@ -2526,12 +2550,39 @@ button {
   .product-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .product-card--coffee {
+    --coffee-card-height: 318px;
+    --coffee-card-padding: 8px;
+    --coffee-image-width: 88%;
+  }
 }
 
 @media (max-width: 900px) {
   :root {
     --header-height: 120px;
     --section-space: 56px;
+  }
+
+  .catalog-hero {
+    padding: calc(var(--header-height) + 18px) 0 40px;
+  }
+
+  .contact-hero,
+  .about-hero {
+    padding: calc(var(--header-height) + 18px) 0 40px;
+  }
+
+  .product-hero {
+    padding: calc(var(--header-height) + 18px) 0 56px;
+  }
+
+  .product-hero-inner {
+    margin-top: 0;
+  }
+
+  .status-page {
+    padding: calc(var(--header-height) + 18px) 0 56px;
   }
 
   .site-header {
@@ -2620,6 +2671,24 @@ button {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     column-gap: 24px;
     row-gap: 40px;
+  }
+
+  .product-card--coffee {
+    --coffee-card-height: 296px;
+    --coffee-card-padding: 8px;
+    --coffee-image-width: 86%;
+  }
+
+  .product-card--coffee[data-product-id="el-guayabal"] {
+    --coffee-image-y: 20px;
+  }
+
+  .product-card--coffee[data-product-id="corahe"] {
+    --coffee-image-y: 0px;
+  }
+
+  .product-card--coffee[data-product-id="zongolica"] {
+    --coffee-image-y: 2px;
   }
 
   .split-inner {
@@ -2943,6 +3012,49 @@ button {
 @media (max-width: 480px) {
   :root {
     --header-height: 148px;
+  }
+
+  .catalog-hero,
+  .contact-hero,
+  .about-hero,
+  .status-page {
+    padding-top: calc(var(--header-height) + 10px);
+  }
+
+  .catalog-hero,
+  .contact-hero,
+  .about-hero {
+    padding-bottom: 36px;
+  }
+
+  .product-hero {
+    padding: calc(var(--header-height) + 10px) 0 48px;
+  }
+
+  .product-hero-inner {
+    margin-top: 0;
+  }
+
+  .product-card--coffee {
+    --coffee-card-height: 250px;
+    --coffee-card-padding: 6px;
+    --coffee-image-width: 84%;
+  }
+
+  .product-card--coffee[data-product-id="el-guayabal"] {
+    --coffee-image-y: 14px;
+  }
+
+  .product-card--coffee[data-product-id="corahe"] {
+    --coffee-image-y: 0px;
+  }
+
+  .product-card--coffee[data-product-id="cosautlan"] {
+    --coffee-image-y: 2px;
+  }
+
+  .product-card--coffee[data-product-id="zongolica"] {
+    --coffee-image-y: 0px;
   }
 
   .logo {
