@@ -588,14 +588,12 @@
     headerRow.className = 'shipping-option-provider';
 
     if (brand) {
-      const logo = document.createElement('span');
+      const logo = document.createElement(brand.image ? 'img' : 'span');
       logo.className = `shipping-option-logo ${brand.className}`;
       if (brand.image) {
-        const logoImg = document.createElement('img');
-        logoImg.src = brand.image;
-        logoImg.alt = brand.imageAlt || brand.label;
-        logoImg.loading = 'lazy';
-        logo.appendChild(logoImg);
+        logo.src = brand.image;
+        logo.alt = brand.imageAlt || brand.label;
+        logo.loading = 'lazy';
       } else {
         logo.textContent = brand.label;
       }
