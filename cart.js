@@ -106,7 +106,7 @@
       ...item,
       id: product.id,
       name: product.name || item.name || 'Producto',
-      image: item.image || product.image || '',
+      image: product.image || item.image || '',
       priceId: matchedSize.priceId,
       priceValue,
       price: priceValue > 0 ? `$${priceValue}` : item.price || '',
